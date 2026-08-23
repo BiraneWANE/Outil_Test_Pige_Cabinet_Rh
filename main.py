@@ -9,6 +9,7 @@ Lancement en local :
 """
 import os
 import secrets
+import threading
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from urllib.parse import quote
@@ -37,19 +38,28 @@ import rgpd
 @asynccontextmanager
 async def cycle_de_vie(app):
     """
-    Purge des donnees echues au demarrage du serveur.
+    Purge des donnees echues au demarrage du serveur, dans un fil separe.
+
+    Le fil separe n'est pas un detail : uvicorn n'ouvre son port qu'apres
+    avoir execute ce code de demarrage, et l'hebergeur considere qu'un
+    service qui n'ouvre pas de port a echoue. Une purge synchrone, avec
+    une base qui met quelques secondes a se reveiller, suffit a faire
+    manquer ce delai. Le serveur repond donc tout de suite, la purge se
+    fait derriere.
 
     L'hebergement ne propose pas de planificateur : ce passage, complete
-    par celui du back-office, suffit largement pour une conservation
-    exprimee en mois. Une base injoignable ne doit pas empecher le
-    serveur de demarrer, d'ou le filet.
+    par celui du back-office, suffit pour une conservation exprimee en
+    mois.
     """
-    try:
-        n = rgpd.purger_si_besoin()
-        if n:
-            print(f"[rgpd] {n} invitation(s) anonymisee(s) au demarrage")
-    except Exception as e:
-        print(f"[rgpd] purge impossible au demarrage : {e}")
+    def tache():
+        try:
+            n = rgpd.purger_si_besoin()
+            if n:
+                print(f"[rgpd] {n} invitation(s) anonymisee(s) au demarrage")
+        except Exception as e:
+            print(f"[rgpd] purge impossible au demarrage : {e}")
+
+    threading.Thread(target=tache, name="purge-rgpd", daemon=True).start()
     yield
 
 
