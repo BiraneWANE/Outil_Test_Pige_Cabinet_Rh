@@ -42,7 +42,16 @@
 
 {% if test.type_test == 'technique' %}
 <h2>Qualité des questions</h2>
-{% if not items_fiable %}
+{% if not items_mesurable %}
+<div class="encadre alerte">
+  <p><b>Pas encore assez de passations pour juger les questions.</b>
+     {{ items_effectif }} sur les {{ items_plancher }} nécessaires.</p>
+  <p class="petit">Avec si peu de candidats, une question réussie paraît
+     forcément trop facile et une question ratée forcément trop difficile :
+     ce sont des artefacts, pas des mesures. Aucun signalement n'est donc
+     émis. Les taux ci-dessous restent affichés à titre indicatif.</p>
+</div>
+{% elif not items_fiable %}
 <div class="encadre alerte">
   <p>Seulement {{ items_effectif }} passation(s). En dessous de trente, ces
      indicateurs donnent une tendance, pas une mesure. Ne retirez pas une

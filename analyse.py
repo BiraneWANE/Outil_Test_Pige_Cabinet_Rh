@@ -15,6 +15,11 @@ import statistics
 from collections import Counter, defaultdict
 
 EFFECTIF_MINIMUM = 30          # en deca, les indicateurs sont indicatifs
+# En dessous de ce plancher, on n'emet aucun signalement sur les questions.
+# Avec deux ou trois passations, toute question reussie parait "trop facile"
+# et toute question ratee "trop difficile" : ce ne sont pas des mesures, ce
+# sont des artefacts, et ils feraient retirer de bonnes questions.
+EFFECTIF_PLANCHER = 10
 P_TROP_FACILE = 0.95           # reussie par presque tout le monde
 P_TROP_DIFFICILE = 0.20        # ratee par presque tout le monde
 R_FAIBLE = 0.10                # ne separe pas les bons des moins bons
@@ -73,7 +78,10 @@ def analyser_items(lignes):
     candidats = list(par_candidat)
     n = len(candidats)
     if n == 0:
-        return {"effectif": 0, "fiable": False, "items": []}
+        return {"effectif": 0, "fiable": False, "mesurable": False,
+                "plancher": EFFECTIF_PLANCHER, "items": [], "a_revoir": []}
+
+    mesurable = n >= EFFECTIF_PLANCHER
 
     numeros = sorted({num for d in par_candidat.values() for num in d})
     scores = {c: sum(par_candidat[c].values()) for c in candidats}
@@ -87,14 +95,15 @@ def analyser_items(lignes):
         t = temps.get(num, [])
 
         alertes = []
-        if p >= P_TROP_FACILE:
-            alertes.append("Trop facile : presque tous les candidats la réussissent")
-        if p <= P_TROP_DIFFICILE:
-            alertes.append("Trop difficile ou corrigé à vérifier")
-        if r is not None and r < R_FAIBLE:
-            alertes.append("Ne discrimine pas : énoncé probablement ambigu")
-        if t and statistics.median(t) <= TEMPS_SUSPECT:
-            alertes.append("Temps de réponse très court : question survolée")
+        if mesurable:
+            if p >= P_TROP_FACILE:
+                alertes.append("Trop facile : presque tous les candidats la réussissent")
+            if p <= P_TROP_DIFFICILE:
+                alertes.append("Trop difficile ou corrigé à vérifier")
+            if r is not None and r < R_FAIBLE:
+                alertes.append("Ne discrimine pas : énoncé probablement ambigu")
+            if t and statistics.median(t) <= TEMPS_SUSPECT:
+                alertes.append("Temps de réponse très court : question survolée")
 
         items.append({
             "numero": num,
@@ -107,6 +116,8 @@ def analyser_items(lignes):
     return {
         "effectif": n,
         "fiable": n >= EFFECTIF_MINIMUM,
+        "mesurable": mesurable,
+        "plancher": EFFECTIF_PLANCHER,
         "items": items,
         "a_revoir": [i["numero"] for i in items if i["alertes"]],
     }

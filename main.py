@@ -430,6 +430,8 @@ def analyser(request: Request, test_id: int, utilisateur: str = Depends(recruteu
         contexte["items"] = mesure["items"]
         contexte["items_effectif"] = mesure["effectif"]
         contexte["items_fiable"] = mesure["fiable"]
+        contexte["items_mesurable"] = mesure["mesurable"]
+        contexte["items_plancher"] = mesure["plancher"]
         contexte["items_a_revoir"] = mesure.get("a_revoir", [])
     else:
         contexte["profils"] = analyse.profils_agreges(resultats)
