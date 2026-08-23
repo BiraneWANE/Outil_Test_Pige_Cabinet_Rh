@@ -39,7 +39,7 @@
         <td>{{ t.theme }}</td>
         <td><span class="barreau" style="width: {{ (t.part * 0.9) | round | int }}px"></span>
             {{ t.reussies }}/{{ t.total }}</td>
-        <td>{{ t.niveau }}</td>
+        <td>{{ t.niveau|joli }}</td>
         <td>{{ t.ratees | join(', ') or '—' }}</td>
       </tr>
     {% endfor %}
@@ -77,7 +77,7 @@
           <span class="barreau" style="width: {{ p.total * 24 }}px"></span>
           {{ p.total }}
         </td>
-        <td>{{ p.lecture }}</td>
+        <td>{{ p.lecture|joli }}</td>
       </tr>
     {% endfor %}
     </tbody>
@@ -88,7 +88,7 @@
   <div class="situation {{ 'vigilance' if s.vigilance }}">
     <p><b>{{ s.numero }}.</b> {{ s.enonce }}</p>
     <p class="choix">{{ s.lettre or '—' }}. {{ s.texte or 'Sans réponse' }}</p>
-    <p class="petit">{{ s.lecture }}</p>
+    <p class="petit">{{ s.lecture|joli }}</p>
   </div>
   {% endfor %}
 {% endif %}
@@ -102,23 +102,23 @@
 {% if guide %}
 <div class="encadre">
   <div class="guide">{{ guide.contenu }}</div>
-  <p class="petit">Genere le {{ guide.genere_le.strftime('%d/%m/%Y a %H:%M') }}
-     par {{ guide.modele }}. Texte produit automatiquement a partir du profil :
-     a relire avant utilisation. Il ne constitue pas une evaluation du candidat
+  <p class="petit">Généré le {{ guide.genere_le|heure }}
+     par {{ guide.modele }}. Texte produit automatiquement à partir du profil :
+     à relire avant utilisation. Il ne constitue pas une évaluation du candidat
      et ne remplace pas votre jugement.</p>
 </div>
 <form method="post" action="/admin/resultat/{{ inv.id }}/guide">
-  <button type="submit">Regenerer le guide</button>
+  <button type="submit">Régénérer le guide</button>
 </form>
 {% elif ia_disponible %}
-<p class="petit">Transforme le profil en questions a poser en entretien. Aucune
-   donnee nominative n'est transmise, et aucune appreciation sur le candidat
+<p class="petit">Transforme le profil en questions à poser en entretien. Aucune
+   donnée nominative n'est transmise, et aucune appréciation sur le candidat
    n'est produite.</p>
 <form method="post" action="/admin/resultat/{{ inv.id }}/guide">
-  <button type="submit">Generer un guide d'entretien</button>
+  <button type="submit">Générer un guide d'entretien</button>
 </form>
 {% else %}
-<p class="petit">Fonction non activee. Renseignez IA_CLE_API dans la
+<p class="petit">Fonction non activée. Renseignez IA_CLE_API dans la
    configuration pour l'utiliser.</p>
 {% endif %}
 {% endif %}

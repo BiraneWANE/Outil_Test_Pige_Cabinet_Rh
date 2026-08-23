@@ -61,8 +61,20 @@ function signaler(type) {
   } catch (e) { /* sans effet sur la passation */ }
 }
 
+// Sur telephone, l'evenement se declenche aussi quand l'ecran se verrouille,
+// qu'une notification s'affiche ou que le clavier s'ouvre. On ne compte donc
+// que les absences reellement exploitables : au moins deux secondes hors de
+// la page. Une absence sans retour n'est pas comptee, faute de duree connue.
+var SEUIL_ABSENCE = 2000;
+var partiA = null;
+
 document.addEventListener('visibilitychange', function () {
-  if (document.visibilityState === 'hidden') signaler('sortie_page');
+  if (document.visibilityState === 'hidden') {
+    partiA = Date.now();
+  } else if (partiA !== null) {
+    if (Date.now() - partiA >= SEUIL_ABSENCE) signaler('sortie_page');
+    partiA = null;
+  }
 });
 
 // --- Chronometre ------------------------------------------------------

@@ -1,6 +1,6 @@
 """Genere le rapport PDF d'une passation, destine a etre transmis au client."""
 import io
-from datetime import datetime
+from datetime import datetime, timezone
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
@@ -9,6 +9,8 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import (KeepTogether, Paragraph, SimpleDocTemplate,
                                 Spacer, Table, TableStyle)
+
+import affichage
 
 ACCENT = colors.HexColor("#2F5D50")
 ALERTE = colors.HexColor("#9E2A2A")
@@ -55,7 +57,7 @@ GRILLE = TableStyle([
 
 def _duree(secondes):
     if not secondes:
-        return "non renseignee"
+        return "non renseignée"
     return f"{secondes // 60} min {secondes % 60} s"
 
 
@@ -63,13 +65,12 @@ def _entete(inv, res, elements):
     elements.append(Paragraph(inv.get("candidat_nom") or "Candidat", S["titre"]))
     ligne = inv["intitule"]
     if inv.get("poste_vise"):
-        ligne += f" &nbsp;|&nbsp; poste vise : {inv['poste_vise']}"
+        ligne += f" &nbsp;|&nbsp; poste visé : {inv['poste_vise']}"
     elements.append(Paragraph(ligne, S["soustitre"]))
 
-    passe = inv.get("termine_le")
     infos = [
-        ["Date de passation", passe.strftime("%d/%m/%Y a %H:%M") if passe else "-"],
-        ["Duree", _duree(res.get("duree_secondes"))],
+        ["Date de passation", affichage.date_heure(inv.get("termine_le"))],
+        ["Durée", _duree(res.get("duree_secondes"))],
     ]
     t = Table(infos, colWidths=[45 * mm, 120 * mm])
     t.setStyle(TableStyle([
@@ -85,23 +86,23 @@ def _entete(inv, res, elements):
 
 
 def _technique(d, res, elements):
-    elements.append(Paragraph("Resultat", S["h2"]))
+    elements.append(Paragraph("Résultat", S["h2"]))
     elements.append(Paragraph(f"{res['score']} / {res['total_points']}", S["score"]))
     elements.append(Paragraph(f"{res['pourcentage']} % &mdash; {d['lecture']}", S["corps"]))
 
     if d.get("synthese"):
-        elements.append(Paragraph("Synthese", S["h2"]))
+        elements.append(Paragraph("Synthèse", S["h2"]))
         elements.append(Paragraph(d["synthese"], S["corps"]))
 
     if d.get("themes"):
-        elements.append(Paragraph("Resultat par theme", S["h2"]))
-        lignes = [["Theme", "Reussite", "Lecture", "Questions manquees"]]
+        elements.append(Paragraph("Résultat par thème", S["h2"]))
+        lignes = [["Thème", "Réussite", "Lecture", "Questions manquées"]]
         styles = []
         for i, t in enumerate(d["themes"], start=1):
             lignes.append([
                 Paragraph(t["theme"], S["cellule"]),
                 f"{t['reussies']}/{t['total']}",
-                t["niveau"],
+                affichage.joli(t["niveau"]),
                 ", ".join(str(n) for n in t["ratees"]) or "-",
             ])
             if t["niveau"] == "acquis":
@@ -115,8 +116,8 @@ def _technique(d, res, elements):
             t_themes.setStyle(TableStyle([st]))
         elements.append(t_themes)
 
-    elements.append(Paragraph("Detail des reponses", S["h2"]))
-    lignes = [["N", "Question", "Attendu", "Donne", ""]]
+    elements.append(Paragraph("Détail des réponses", S["h2"]))
+    lignes = [["N°", "Question", "Attendu", "Donné", ""]]
     styles = []
     for i, q in enumerate(d["questions"], start=1):
         texte = q["enonce"]
@@ -142,9 +143,9 @@ def _technique(d, res, elements):
 
     elements.append(Spacer(1, 6))
     elements.append(Paragraph(
-        "Une question est validee uniquement si toutes les bonnes reponses sont "
-        "cochees et qu'aucune reponse erronee ne l'est. Aucun point partiel, "
-        "aucun point negatif.", S["note"]))
+        "Une question est validée uniquement si toutes les bonnes réponses sont "
+        "cochées et qu'aucune réponse erronée ne l'est. Aucun point partiel, "
+        "aucun point négatif.", S["note"]))
 
 
 def _barre(valeur, maximum=6, largeur=24):
@@ -160,7 +161,7 @@ def _positionnement(d, elements):
             Paragraph(p["nom"], S["cellule"]),
             str(p["total"]),
             Paragraph(f"<font color='#2F5D50'>{_barre(p['total'])}</font>", S["cellule"]),
-            p["lecture"],
+            affichage.joli(p["lecture"]),
         ])
     t = Table(lignes, colWidths=[62 * mm, 14 * mm, 55 * mm, 34 * mm], repeatRows=1)
     t.setStyle(GRILLE)
@@ -168,8 +169,8 @@ def _positionnement(d, elements):
 
     elements.append(Spacer(1, 4))
     elements.append(Paragraph(
-        "Le profil est relatif au candidat : les totaux s'additionnent toujours a 21. "
-        "Une dimension ne peut monter que si une autre descend. Ces resultats ne "
+        "Le profil est relatif au candidat : les totaux s'additionnent toujours à 21. "
+        "Une dimension ne peut monter que si une autre descend. Ces résultats ne "
         "permettent donc pas de comparer deux candidats entre eux.", S["note"]))
 
     elements.append(Paragraph("Mises en situation", S["h2"]))
@@ -178,9 +179,9 @@ def _positionnement(d, elements):
             Paragraph(f"<b>{s['numero']}.</b> {s['enonce']}", S["corps"]),
             Paragraph(
                 f"<font color='{'#9E2A2A' if s['vigilance'] else '#1F7A3D'}'>"
-                f"<b>{s['lettre'] or '-'}. {s['texte'] or 'Sans reponse'}</b></font>",
+                f"<b>{s['lettre'] or '-'}. {s['texte'] or 'Sans réponse'}</b></font>",
                 S["corps"]),
-            Paragraph(s["lecture"] or "", S["petit"]),
+            Paragraph(affichage.joli(s["lecture"]) or "", S["petit"]),
             Spacer(1, 6),
         ]
         elements.append(KeepTogether(bloc))
@@ -188,11 +189,11 @@ def _positionnement(d, elements):
 
 def _avertissement(elements):
     texte = (
-        "<b>Precautions d'usage.</b> Ce questionnaire n'est pas un test psychometrique "
-        "valide : aucune etude de fidelite ni de validite n'a ete conduite sur une "
-        "population de reference. Il ne mesure aucun trait de personnalite au sens "
+        "<b>Précautions d'usage.</b> Ce questionnaire n'est pas un test psychométrique "
+        "validé : aucune étude de fidélité ni de validité n'a été conduite sur une "
+        "population de référence. Il ne mesure aucun trait de personnalité au sens "
         "clinique et ne produit ni note ni classement. Il constitue un support de "
-        "preparation a l'entretien et ne doit jamais etre utilise seul pour ecarter "
+        "préparation à l'entretien et ne doit jamais être utilisé seul pour écarter "
         "une candidature."
     )
     t = Table([[Paragraph(texte, S["petit"])]], colWidths=[165 * mm])
@@ -216,7 +217,7 @@ def _anomalies(anomalies, elements):
         prefixe = "Attention" if a["gravite"] == "attention" else "Information"
         elements.append(Paragraph(f"<b>{prefixe} :</b> {a['libelle']}", S["corps"]))
     elements.append(Paragraph(
-        "Aucun de ces signalements n'est disqualifiant. Ce sont des sujets a evoquer "
+        "Aucun de ces signalements n'est disqualifiant. Ce sont des sujets à évoquer "
         "en entretien.", S["note"]))
 
 
@@ -225,7 +226,7 @@ def _pied(canvas, doc):
     canvas.setFont("Helvetica", 7)
     canvas.setFillColor(DOUX)
     canvas.drawString(20 * mm, 12 * mm,
-                      "Document confidentiel - usage strictement limite au processus "
+                      "Document confidentiel - usage strictement limité au processus "
                       "de recrutement")
     canvas.drawRightString(190 * mm, 12 * mm, f"Page {doc.page}")
     canvas.restoreState()
@@ -238,7 +239,7 @@ def construire(inv, res, anomalies=None):
         tampon, pagesize=A4,
         leftMargin=20 * mm, rightMargin=20 * mm,
         topMargin=18 * mm, bottomMargin=20 * mm,
-        title=f"Resultat - {inv.get('candidat_nom') or 'candidat'}",
+        title=f"Résultat - {inv.get('candidat_nom') or 'candidat'}",
         author="Plateforme de tests candidats",
     )
     d = res["detail"]
@@ -259,5 +260,5 @@ def construire(inv, res, anomalies=None):
 def nom_fichier(inv):
     nom = (inv.get("candidat_nom") or "candidat").replace(" ", "_")
     nom = "".join(c for c in nom if c.isalnum() or c in "_-")
-    date = (inv.get("termine_le") or datetime.now()).strftime("%Y%m%d")
+    date = affichage.jour(inv.get("termine_le") or datetime.now(timezone.utc))
     return f"resultat_{nom}_{date}.pdf"

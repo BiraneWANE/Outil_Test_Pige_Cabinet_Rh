@@ -20,6 +20,13 @@ P_TROP_DIFFICILE = 0.20        # ratee par presque tout le monde
 R_FAIBLE = 0.10                # ne separe pas les bons des moins bons
 TEMPS_SUSPECT = 3              # secondes : reponse sans lecture
 
+# Sorties de page : sur telephone, verrouiller l'ecran ou recevoir une
+# notification declenche l'evenement sans que le candidat cherche a tricher.
+# Le navigateur ne signale desormais que les absences d'au moins deux
+# secondes, et il faut un nombre eleve de sorties pour lever une alerte.
+SORTIES_ATTENTION = 8          # au-dela : signalement en "attention"
+SORTIES_INFO = 3               # au-dela : simple information
+
 
 # ==================================================================
 # 1. Analyse d'items (tests techniques)
@@ -81,13 +88,13 @@ def analyser_items(lignes):
 
         alertes = []
         if p >= P_TROP_FACILE:
-            alertes.append("Trop facile : presque tous les candidats la reussissent")
+            alertes.append("Trop facile : presque tous les candidats la réussissent")
         if p <= P_TROP_DIFFICILE:
-            alertes.append("Trop difficile ou corrige a verifier")
+            alertes.append("Trop difficile ou corrigé à vérifier")
         if r is not None and r < R_FAIBLE:
-            alertes.append("Ne discrimine pas : enonce probablement ambigu")
+            alertes.append("Ne discrimine pas : énoncé probablement ambigu")
         if t and statistics.median(t) <= TEMPS_SUSPECT:
-            alertes.append("Temps de reponse tres court : question survolee")
+            alertes.append("Temps de réponse très court : question survolée")
 
         items.append({
             "numero": num,
@@ -198,7 +205,7 @@ def frequence_situations(resultats):
         for s in r["detail"].get("situations", []):
             num = s["numero"]
             enonces[num] = s["enonce"]
-            compte[num][s["lettre"] or "sans reponse"] += 1
+            compte[num][s["lettre"] or "sans réponse"] += 1
             if s["vigilance"]:
                 vigilance[num] += 1
 
@@ -236,19 +243,19 @@ def detecter_anomalies(invitation, resultat, vues, reponses_par_lettre,
 
     if duree and duree < 0.30 * alloue:
         a.append(("passation_rapide",
-                  f"Test termine en {round(duree / 60)} minutes sur "
-                  f"{invitation['duree_minutes']} : reponses possiblement survolees",
+                  f"Test terminé en {round(duree / 60)} minutes sur "
+                  f"{invitation['duree_minutes']} : réponses possiblement survolées",
                   "attention"))
 
     if duree and duree >= alloue - 5:
         a.append(("temps_epuise",
-                  "Le temps imparti a ete entierement consomme",
+                  "Le temps imparti a été entièrement consommé",
                   "info"))
 
     rapides = [v for v in vues if v["duree_secondes"] and v["duree_secondes"] <= TEMPS_SUSPECT]
     if len(rapides) >= max(3, 0.25 * len(vues)):
         a.append(("reponses_eclair",
-                  f"{len(rapides)} question(s) repondues en moins de "
+                  f"{len(rapides)} question(s) répondues en moins de "
                   f"{TEMPS_SUSPECT} secondes",
                   "attention"))
 
@@ -257,24 +264,26 @@ def detecter_anomalies(invitation, resultat, vues, reponses_par_lettre,
         lettre, n = max(reponses_par_lettre.items(), key=lambda x: x[1])
         if total and n / total >= 0.80:
             a.append(("reponse_monotone",
-                      f"{round(100 * n / total)} % des reponses sur la position "
-                      f"{lettre} : reponse au hasard probable",
+                      f"{round(100 * n / total)} % des réponses sur la position "
+                      f"{lettre} : réponse au hasard probable",
                       "attention"))
 
     c = comportement or {}
     sorties = c.get("sorties_page", 0)
-    if sorties >= 3:
+    if sorties >= SORTIES_ATTENTION:
         a.append(("sorties_repetees",
-                  f"Le candidat a quitte la page {sorties} fois pendant la passation",
+                  f"Le candidat a quitté la page {sorties} fois pendant la passation",
                   "attention"))
-    elif sorties > 0:
+    elif sorties >= SORTIES_INFO:
         a.append(("sorties_page",
-                  f"Le candidat a quitte la page {sorties} fois",
+                  f"Le candidat a quitté la page {sorties} fois. Sur téléphone, "
+                  f"un verrouillage d'écran ou une notification suffit à le "
+                  f"déclencher",
                   "info"))
 
     if c.get("copies_tentees", 0) >= 2:
         a.append(("copies_tentees",
-                  f"{c['copies_tentees']} tentative(s) de copie de l'enonce",
+                  f"{c['copies_tentees']} tentative(s) de copie de l'énoncé",
                   "attention"))
 
     detail = resultat.get("detail", {})
@@ -284,16 +293,16 @@ def detecter_anomalies(invitation, resultat, vues, reponses_par_lettre,
             ecart = profil[0]["total"] - profil[-1]["total"]
             if ecart <= 1:
                 a.append(("profil_plat",
-                          "Profil sans relief : le candidat a evite de se positionner",
+                          "Profil sans relief : le candidat a évité de se positionner",
                           "info"))
         if detail.get("non_repondues", 0) >= 3:
             a.append(("incomplet",
-                      f"{detail['non_repondues']} question(s) sans reponse",
+                      f"{detail['non_repondues']} question(s) sans réponse",
                       "attention"))
     else:
         sans = sum(1 for q in detail.get("questions", []) if not q["donne"])
         if sans >= max(2, 0.20 * len(detail.get("questions", []))):
             a.append(("incomplet",
-                      f"{sans} question(s) sans reponse", "attention"))
+                      f"{sans} question(s) sans réponse", "attention"))
 
     return [{"code": c, "libelle": l, "gravite": g} for c, l, g in a]

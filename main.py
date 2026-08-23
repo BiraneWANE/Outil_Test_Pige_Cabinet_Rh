@@ -29,10 +29,17 @@ import correction
 import analyse
 import rapport_pdf
 import ia
+import affichage
 
 app = FastAPI(title="Tests candidats")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+# Le serveur tourne en UTC : les dates sont converties dans le fuseau du
+# cabinet au moment de l'affichage, et les libelles enregistres sans
+# accent sont accentues de la meme facon.
+templates.env.filters["heure"] = affichage.date_heure
+templates.env.filters["joli"] = affichage.joli
 
 URL_PUBLIQUE = os.environ.get("URL_PUBLIQUE", "http://127.0.0.1:8000")
 MOT_DE_PASSE = os.environ.get("MOT_DE_PASSE_RECRUTEUR")
@@ -46,7 +53,7 @@ def recruteur(creds: HTTPBasicCredentials = Depends(securite)):
     """Authentification simple du back-office. A remplacer par un vrai
     annuaire si plusieurs consultants doivent avoir des acces distincts."""
     if not MOT_DE_PASSE:
-        raise HTTPException(500, "MOT_DE_PASSE_RECRUTEUR n'est pas defini.")
+        raise HTTPException(500, "MOT_DE_PASSE_RECRUTEUR n'est pas défini.")
     if not secrets.compare_digest(creds.password, MOT_DE_PASSE):
         raise HTTPException(401, "Identifiants invalides",
                             headers={"WWW-Authenticate": "Basic"})
@@ -135,7 +142,7 @@ def demarrer(token: str, nom: str = Form(...), consentement: str = Form(None)):
     if etat != "ok":
         raise HTTPException(410, "Ce lien n'est plus utilisable.")
     if not consentement:
-        raise HTTPException(400, "L'information sur les donnees doit etre acceptee.")
+        raise HTTPException(400, "L'information sur les données doit être acceptée.")
     db.demarrer(inv["id"])
     db.journaliser(inv["id"], "demarrage", nom)
     return RedirectResponse(f"/t/{token}/q/1", status_code=303)
@@ -289,7 +296,7 @@ def voir_resultat(request: Request, invitation_id: int, erreur: str = None,
                   utilisateur: str = Depends(recruteur)):
     res = db.resultat_de(invitation_id)
     if not res:
-        raise HTTPException(404, "Aucun resultat pour cette invitation.")
+        raise HTTPException(404, "Aucun résultat pour cette invitation.")
     with db.curseur() as cur:
         cur.execute(
             """
@@ -357,7 +364,7 @@ def generer_guide(invitation_id: int, utilisateur: str = Depends(recruteur)):
     """
     res = db.resultat_de(invitation_id)
     if not res:
-        raise HTTPException(404, "Aucun resultat pour cette invitation.")
+        raise HTTPException(404, "Aucun résultat pour cette invitation.")
 
     with db.curseur() as cur:
         cur.execute(
@@ -392,7 +399,7 @@ def resultat_pdf(invitation_id: int, utilisateur: str = Depends(recruteur)):
     """Rapport PDF d'un candidat, destine a etre transmis au client."""
     res = db.resultat_de(invitation_id)
     if not res:
-        raise HTTPException(404, "Aucun resultat pour cette invitation.")
+        raise HTTPException(404, "Aucun résultat pour cette invitation.")
     with db.curseur() as cur:
         cur.execute(
             """

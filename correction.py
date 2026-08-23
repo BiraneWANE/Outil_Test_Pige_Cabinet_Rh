@@ -1,9 +1,9 @@
 """Correction des tests techniques et calcul des profils de positionnement."""
 
 SEUILS_TECHNIQUE = [
-    (0.85, "Tres bon niveau technique, autonomie rapide sur un portefeuille"),
-    (0.70, "Bon niveau, base solide a consolider sur quelques points"),
-    (0.50, "Niveau moyen, accompagnement technique necessaire"),
+    (0.85, "Très bon niveau technique, autonomie rapide sur un portefeuille"),
+    (0.70, "Bon niveau, base solide à consolider sur quelques points"),
+    (0.50, "Niveau moyen, accompagnement technique nécessaire"),
     (0.00, "Bases insuffisantes pour une prise de poste sans formation interne"),
 ]
 
@@ -225,10 +225,10 @@ def calculer_positionnement(questions, reponses, dimensions, duree_secondes):
         "detail": {
             "type": "positionnement",
             "avertissement": (
-                "Ce questionnaire n'est pas un test psychometrique valide. "
-                "Il prepare l'entretien et ne doit jamais servir seul a ecarter "
+                "Ce questionnaire n'est pas un test psychométrique validé. "
+                "Il prépare l'entretien et ne doit jamais servir seul à écarter "
                 "une candidature. Le profil est relatif : les totaux s'additionnent "
-                "toujours a 21, ne comparez pas deux candidats entre eux."
+                "toujours à 21, ne comparez pas deux candidats entre eux."
             ),
             "profil": profil,
             "situations": choix_partie2,
@@ -238,12 +238,12 @@ def calculer_positionnement(questions, reponses, dimensions, duree_secondes):
 
 
 DIMENSIONS_PAR_DEFAUT = {
-    "R": "Rigueur et fiabilite",
-    "O": "Organisation et priorites",
+    "R": "Rigueur et fiabilité",
+    "O": "Organisation et priorités",
     "A": "Autonomie et initiative",
     "C": "Relation et communication",
     "S": "Gestion de la charge et du stress",
-    "E": "Ethique et confidentialite",
+    "E": "Éthique et confidentialité",
     "N": "Ouverture et apprentissage",
 }
 
