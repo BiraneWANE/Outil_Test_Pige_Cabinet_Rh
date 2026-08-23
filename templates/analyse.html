@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block titre %}Analyse{% endblock %}
+{% block contenu %}
+<h1>{{ test.intitule }}</h1>
+
+<div class="cartes">
+  <div class="carte"><span class="gros">{{ stats.envoyees }}</span>invitations</div>
+  <div class="carte"><span class="gros">{{ stats.terminees }}</span>terminées</div>
+  <div class="carte"><span class="gros">{{ stats.taux_completion or '—' }}%</span>complétion</div>
+  {% if stats.score_median is defined %}
+  <div class="carte"><span class="gros">{{ stats.score_median }}%</span>score médian</div>
+  {% endif %}
+  {% if stats.duree_mediane_min is defined %}
+  <div class="carte"><span class="gros">{{ stats.duree_mediane_min }}</span>min (médiane)</div>
+  {% endif %}
+</div>
+
+{% if stats.jamais_ouvertes or stats.abandons %}
+<p class="petit">{{ stats.jamais_ouvertes }} lien(s) jamais ouvert(s),
+   {{ stats.abandons }} abandon(s) ou expiration(s).
+   {% if stats.temps_ecoule %}{{ stats.temps_ecoule }} candidat(s) ont consommé
+   tout le temps imparti.{% endif %}</p>
+{% endif %}
+
+{% if stats.score_moyen is defined %}
+<h2>Distribution des scores</h2>
+<table>
+  <tbody>
+  {% for d in distribution %}
+    <tr>
+      <td style="width:130px">{{ d.tranche }}</td>
+      <td><span class="barreau" style="width: {{ d.effectif * 22 }}px"></span>
+          {{ d.effectif }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="petit">Moyenne {{ stats.score_moyen }} %, écart-type {{ stats.ecart_type }},
+   du {{ stats.score_min }} % au {{ stats.score_max }} %.
+   Un écart-type faible signifie que le test ne sépare pas les candidats.</p>
+{% endif %}
+
+{% if items %}
+<h2>Qualité des questions</h2>
+{% if not items.fiable %}
+<div class="encadre alerte">
+  <p>Seulement {{ items.effectif }} passation(s). En dessous de trente, ces
+     indicateurs donnent une tendance, pas une mesure. Ne retirez pas une
+     question sur cette seule base.</p>
+</div>
+{% else %}
+<p class="petit">Calculé sur {{ items.effectif }} passations.</p>
+{% endif %}
+
+<table>
+  <thead>
+    <tr><th>N°</th><th>Réussite</th><th>Discrimination</th>
+        <th>Temps médian</th><th>Signalement</th></tr>
+  </thead>
+  <tbody>
+  {% for i in items.items %}
+    <tr class="{{ 'faux' if i.alertes }}">
+      <td>{{ i.numero }}</td>
+      <td>{{ i.taux_reussite }} %</td>
+      <td>{{ i.correlation if i.correlation is not none else '—' }}</td>
+      <td>{{ i.temps_median ~ ' s' if i.temps_median else '—' }}</td>
+      <td>{% for a in i.alertes %}<div class="petit">{{ a }}</div>{% endfor %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="petit"><b>Réussite</b> : part des candidats qui valident la question.
+   <b>Discrimination</b> : lien entre réussir cette question et bien réussir
+   l'ensemble. En dessous de 0,10, la question ne sépare pas les candidats et son
+   énoncé est probablement ambigu.</p>
+{% if items.a_revoir %}
+<div class="encadre alerte">
+  <p><b>Questions à revoir :</b> {{ items.a_revoir | join(', ') }}</p>
+</div>
+{% endif %}
+{% endif %}
+
+{% if profils %}
+<h2>Profil moyen des candidats</h2>
+<p class="petit">Calculé sur {{ effectif }} passation(s). Sert à situer un candidat
+   par rapport aux autres, ce que son profil individuel ne permet pas.</p>
+<table>
+  <thead><tr><th>Dimension</th><th>Moyenne</th><th>Médiane</th></tr></thead>
+  <tbody>
+  {% for p in profils %}
+    <tr>
+      <td>{{ p.nom }}</td>
+      <td><span class="barreau" style="width: {{ (p.moyenne * 24) | round | int }}px"></span>
+          {{ p.moyenne }}</td>
+      <td>{{ p.mediane }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if situations %}
+<h2>Répartition des mises en situation</h2>
+{% for s in situations %}
+<div class="situation">
+  <p><b>{{ s.numero }}.</b> {{ s.enonce }}</p>
+  <p class="petit">
+    {% for r in s.repartition %}{{ r.lettre }} : {{ r.part }} % &nbsp; {% endfor %}
+    — point de vigilance choisi par {{ s.part_vigilance }} % des candidats
+  </p>
+  {% if s.options_mortes %}
+  <p class="petit alerte-texte">Option(s) jamais choisie(s) :
+     {{ s.options_mortes | join(', ') }}. À réécrire.</p>
+  {% endif %}
+</div>
+{% endfor %}
+{% endif %}
+
+<p><a class="lien" href="/admin/analyse">Choisir un autre test</a> —
+   <a class="lien" href="/admin">Retour aux invitations</a></p>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block titre %}Back-office{% endblock %}
+{% block contenu %}
+<h1>Invitations</h1>
+<p class="chapeau">Connecté en tant que {{ utilisateur }} — <a class="lien" href="/admin/analyse">analyse des tests</a></p>
+
+<div class="encadre">
+  <h2>Créer une invitation</h2>
+  <form method="post" action="/admin/inviter" class="grille">
+    <label>Test
+      <select name="test_id" required>
+        {% for t in tests %}
+        <option value="{{ t.id }}">{{ t.intitule }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Nom du candidat <input type="text" name="nom"></label>
+    <label>Adresse électronique <input type="email" name="email"></label>
+    <label>Poste visé <input type="text" name="poste"></label>
+    <button type="submit">Générer le lien</button>
+  </form>
+</div>
+
+<p><a class="lien" href="/admin/resultats.csv">Télécharger tous les résultats (CSV)</a></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Candidat</th><th>Test</th><th>Statut</th>
+      <th>Résultat</th><th>Lien</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for i in invitations %}
+    <tr>
+      <td>{{ i.candidat_nom or '—' }}<br><span class="petit">{{ i.poste_vise or '' }}</span></td>
+      <td>{{ i.intitule }}</td>
+      <td><span class="etat {{ i.statut }}">{{ i.statut }}</span></td>
+      <td>
+        {% if i.statut == 'terminee' %}
+          {% if i.type_test == 'technique' %}
+            <b>{{ i.score }}/{{ i.total_points }}</b>
+          {% else %}
+            {{ i.nb_vigilances }} vigilance(s)
+          {% endif %}
+          <a href="/admin/resultat/{{ i.id }}">détail</a>
+          <a href="/admin/resultat/{{ i.id }}/pdf">PDF</a>
+        {% else %}—{% endif %}
+      </td>
+      <td><input class="lien-copiable" readonly
+                 value="{{ url_publique }}/t/{{ i.token }}"></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

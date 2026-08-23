@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block contenu %}
+<div class="barre">
+  <span>Question {{ numero }} sur {{ total }}</span>
+  <span id="chrono" class="chrono" data-restant="{{ restant }}"></span>
+</div>
+<div class="jauge"><div style="width: {{ (100 * numero / total)|round(0) }}%"></div></div>
+
+<div class="protege">
+<h2 class="enonce">{{ q.enonce }}</h2>
+<p class="format">
+  {% if q.format == 'multiple' %}Plusieurs réponses possibles
+  {% elif q.format == 'paire' %}Cochez la proposition qui vous correspond le mieux
+  {% else %}Une seule réponse{% endif %}
+</p>
+
+<form method="post" action="/t/{{ inv.token }}/q/{{ numero }}">
+  {% for o in q.options %}
+  <label class="option">
+    <input type="{{ 'checkbox' if multiple else 'radio' }}" name="option"
+           value="{{ o.id }}" {% if o.id in deja %}checked{% endif %}>
+    <span>{% if q.format != 'paire' %}<b>{{ o.lettre }}.</b> {% endif %}{{ o.texte }}</span>
+  </label>
+  {% endfor %}
+  </div>
+  <div class="actions">
+    {% if numero > 1 %}
+    <a class="lien" href="/t/{{ inv.token }}/q/{{ numero - 1 }}">Question précédente</a>
+    {% endif %}
+    <button type="submit">
+      {% if numero >= total %}Terminer{% else %}Question suivante{% endif %}
+    </button>
+  </div>
+</form>
+
+<script>
+// --- Dissuasion de la copie -----------------------------------------
+// Empeche le geste reflexe. Ce n'est pas une protection : un candidat
+// determine contourne cela en quelques clics. La mesure du comportement
+// ci-dessous est bien plus informative.
+(function () {
+  var zone = document.querySelector('.protege');
+  if (!zone) return;
+  ['copy', 'cut', 'contextmenu', 'dragstart'].forEach(function (ev) {
+    zone.addEventListener(ev, function (e) {
+      e.preventDefault();
+      signaler('copie_tentee');
+      return false;
+    });
+  });
+})();
+
+// --- Mesure des sorties de page --------------------------------------
+// On ne bloque rien : on compte. Un candidat qui consulte une autre
+// application quitte l'onglet, et cela apparait dans le rapport.
+function signaler(type) {
+  try {
+    var donnees = new Blob([JSON.stringify({ type: type })],
+                           { type: 'application/json' });
+    navigator.sendBeacon('/t/{{ inv.token }}/evenement', donnees);
+  } catch (e) { /* sans effet sur la passation */ }
+}
+
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'hidden') signaler('sortie_page');
+});
+
+// --- Chronometre ------------------------------------------------------
+// Affichage du temps restant. Le decompte qui fait foi est calcule par le
+// serveur : modifier ce script ne prolonge pas le test.
+(function () {
+  var el = document.getElementById('chrono');
+  var restant = parseInt(el.dataset.restant, 10);
+  function afficher() {
+    if (restant <= 0) { window.location.reload(); return; }
+    var m = Math.floor(restant / 60), s = restant % 60;
+    el.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    if (restant <= 60) el.classList.add('urgent');
+    restant -= 1;
+  }
+  afficher();
+  setInterval(afficher, 1000);
+})();
+</script>
+{% endblock %}

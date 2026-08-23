@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block contenu %}
+<h1>{{ inv.intitule }}</h1>
+<p class="chapeau">Durée : {{ inv.duree_minutes }} minutes. Le chronomètre démarre
+dès que vous cliquez sur le bouton, et ne peut pas être mis en pause.</p>
+
+<div class="encadre">
+  <h2>Consignes</h2>
+  <p>{{ inv.consignes }}</p>
+  {% if inv.type_test == 'technique' %}
+  <p>Aucun document ni assistance extérieure n'est autorisé.</p>
+  {% else %}
+  <p>Il n'y a ni bonne ni mauvaise réponse. Répondez spontanément.</p>
+  {% endif %}
+  <p>Le test doit être réalisé seul, sans aide extérieure ni assistant
+     automatique. La copie des énoncés est désactivée, et les changements
+     d'application pendant l'épreuve sont enregistrés.</p>
+  <p>Vos réponses sont enregistrées au fur et à mesure. Si votre navigateur se ferme,
+     vous pouvez revenir sur ce lien : vous reprendrez où vous en étiez, le temps
+     continuant de s'écouler.</p>
+</div>
+
+<div class="encadre discret">
+  <h2>Informations sur vos données</h2>
+  <p>Les réponses que vous transmettez sont utilisées uniquement dans le cadre de
+     votre candidature. Elles sont conservées pour une durée limitée puis supprimées.
+     Vous pouvez demander à y accéder, à les faire rectifier ou effacer en écrivant
+     au cabinet.</p>
+  <p>Sont également enregistrés le temps passé sur chaque question et le nombre
+     de fois où vous quittez la page. Ces éléments servent à interpréter vos
+     résultats et ne donnent lieu à aucune décision automatisée.</p>
+</div>
+
+<form method="post" action="/t/{{ inv.token }}/demarrer">
+  <label for="nom">Vos nom et prénom</label>
+  <input type="text" id="nom" name="nom" required
+         value="{{ inv.candidat_nom or '' }}">
+  <label class="case">
+    <input type="checkbox" name="consentement" value="1" required>
+    J'ai pris connaissance des informations ci-dessus.
+  </label>
+  <button type="submit">Démarrer le test</button>
+</form>
+{% endblock %}

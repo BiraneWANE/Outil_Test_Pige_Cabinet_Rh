@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block titre %}Analyse{% endblock %}
+{% block contenu %}
+<h1>Analyse des tests</h1>
+<p class="chapeau">Choisissez un test pour examiner la qualité de ses questions
+et la distribution des résultats.</p>
+<ul class="liste">
+{% for t in tests %}
+  <li><a class="lien" href="/admin/analyse/{{ t.id }}">{{ t.intitule }}</a>
+      <span class="petit">{{ t.type_test }}</span></li>
+{% endfor %}
+</ul>
+<p><a class="lien" href="/admin/export.csv">Télécharger les données au format CSV</a>
+   <span class="petit">— anonymisé, une ligne par question et par passation</span></p>
+<p><a class="lien" href="/admin">Retour aux invitations</a></p>
+{% endblock %}

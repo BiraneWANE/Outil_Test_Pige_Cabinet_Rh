@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block contenu %}
+<h1>Lien indisponible</h1>
+{% if etat == 'expiree' %}
+<p class="chapeau">Ce lien a expiré.</p>
+{% else %}
+<p class="chapeau">Ce lien n'est plus actif.</p>
+{% endif %}
+<p>Contactez le cabinet pour en obtenir un nouveau.</p>
+{% endblock %}

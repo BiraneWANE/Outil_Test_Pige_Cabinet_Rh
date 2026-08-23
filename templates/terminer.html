@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block contenu %}
+<h1>Avant de valider</h1>
+<p class="chapeau">Vous avez répondu à {{ repondues }} question(s) sur {{ total }}.</p>
+{% if repondues < total %}
+<div class="encadre alerte">
+  <p>Certaines questions n'ont pas de réponse. Vous pouvez revenir en arrière
+     pour les compléter tant que le temps le permet.</p>
+</div>
+{% endif %}
+<form method="post" action="/t/{{ inv.token }}/terminer">
+  <div class="actions">
+    <a class="lien" href="/t/{{ inv.token }}/q/1">Revoir mes réponses</a>
+    <button type="submit">Valider définitivement</button>
+  </div>
+</form>
+<p class="format">Une fois validé, le test ne pourra plus être modifié.</p>
+{% endblock %}

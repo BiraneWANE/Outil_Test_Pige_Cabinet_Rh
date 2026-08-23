@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block titre %}Résultat{% endblock %}
+{% block contenu %}
+<h1>{{ inv.candidat_nom or 'Candidat' }}</h1>
+<p class="chapeau">{{ inv.intitule }}
+{% if res.duree_secondes %} — durée : {{ (res.duree_secondes // 60) }} min {{ res.duree_secondes % 60 }} s{% endif %}
+</p>
+
+{% if anomalies %}
+<div class="encadre alerte">
+  <h2>Signalements automatiques</h2>
+  {% for a in anomalies %}
+  <p class="petit"><b>{{ 'Attention' if a.gravite == 'attention' else 'Information' }} :</b>
+     {{ a.libelle }}</p>
+  {% endfor %}
+  <p class="petit">Aucun de ces signalements n'est disqualifiant. Ce sont des
+     sujets à évoquer en entretien.</p>
+</div>
+{% endif %}
+
+{% if d.type == 'technique' %}
+  <div class="encadre">
+    <p class="gros">{{ res.score }} / {{ res.total_points }} — {{ res.pourcentage }} %</p>
+    <p>{{ d.lecture }}</p>
+  </div>
+
+  {% if d.synthese %}
+  <h2>Synthèse</h2>
+  <div class="encadre"><p>{{ d.synthese }}</p></div>
+  {% endif %}
+
+  {% if d.themes %}
+  <h2>Résultat par thème</h2>
+  <table>
+    <thead><tr><th>Thème</th><th>Réussite</th><th>Lecture</th><th>Questions manquées</th></tr></thead>
+    <tbody>
+    {% for t in d.themes %}
+      <tr class="{{ 'juste' if t.niveau == 'acquis' else ('faux' if t.niveau == 'a consolider') }}">
+        <td>{{ t.theme }}</td>
+        <td><span class="barreau" style="width: {{ (t.part * 0.9) | round | int }}px"></span>
+            {{ t.reussies }}/{{ t.total }}</td>
+        <td>{{ t.niveau }}</td>
+        <td>{{ t.ratees | join(', ') or '—' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  <table>
+    <thead><tr><th>N°</th><th>Question</th><th>Attendu</th><th>Donné</th><th></th></tr></thead>
+    <tbody>
+    {% for q in d.questions %}
+      <tr class="{{ 'juste' if q.juste else 'faux' }}">
+        <td>{{ q.numero }}</td>
+        <td>{{ q.enonce }}
+          {% if not q.juste and q.justification %}
+          <div class="petit">{{ q.justification }}</div>{% endif %}</td>
+        <td>{{ q.attendu | join(', ') }}</td>
+        <td>{{ q.donne | join(', ') or '—' }}</td>
+        <td>{{ '✔' if q.juste else '✘' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+{% else %}
+  <div class="encadre alerte"><p>{{ d.avertissement }}</p></div>
+
+  <h2>Profil</h2>
+  <table>
+    <thead><tr><th>Dimension</th><th>Total (0 à 6)</th><th>Lecture</th></tr></thead>
+    <tbody>
+    {% for p in d.profil %}
+      <tr>
+        <td>{{ p.nom }}</td>
+        <td>
+          <span class="barreau" style="width: {{ p.total * 24 }}px"></span>
+          {{ p.total }}
+        </td>
+        <td>{{ p.lecture }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Mises en situation</h2>
+  {% for s in d.situations %}
+  <div class="situation {{ 'vigilance' if s.vigilance }}">
+    <p><b>{{ s.numero }}.</b> {{ s.enonce }}</p>
+    <p class="choix">{{ s.lettre or '—' }}. {{ s.texte or 'Sans réponse' }}</p>
+    <p class="petit">{{ s.lecture }}</p>
+  </div>
+  {% endfor %}
+{% endif %}
+
+{% if d.type == 'positionnement' %}
+<h2>Guide d'entretien</h2>
+{% if erreur_ia %}
+<div class="encadre alerte"><p class="petit">{{ erreur_ia }}</p></div>
+{% endif %}
+
+{% if guide %}
+<div class="encadre">
+  <div class="guide">{{ guide.contenu }}</div>
+  <p class="petit">Genere le {{ guide.genere_le.strftime('%d/%m/%Y a %H:%M') }}
+     par {{ guide.modele }}. Texte produit automatiquement a partir du profil :
+     a relire avant utilisation. Il ne constitue pas une evaluation du candidat
+     et ne remplace pas votre jugement.</p>
+</div>
+<form method="post" action="/admin/resultat/{{ inv.id }}/guide">
+  <button type="submit">Regenerer le guide</button>
+</form>
+{% elif ia_disponible %}
+<p class="petit">Transforme le profil en questions a poser en entretien. Aucune
+   donnee nominative n'est transmise, et aucune appreciation sur le candidat
+   n'est produite.</p>
+<form method="post" action="/admin/resultat/{{ inv.id }}/guide">
+  <button type="submit">Generer un guide d'entretien</button>
+</form>
+{% else %}
+<p class="petit">Fonction non activee. Renseignez IA_CLE_API dans la
+   configuration pour l'utiliser.</p>
+{% endif %}
+{% endif %}
+
+<p style="margin-top:24px">
+
+  <a class="bouton-lien" href="/admin/resultat/{{ inv.id }}/pdf">Télécharger le PDF</a>
+  &nbsp;&nbsp;<a class="lien" href="/admin">Retour aux invitations</a>
+</p>
+{% endblock %}
