@@ -462,3 +462,39 @@ def exporter(utilisateur: str = Depends(recruteur)):
 @app.get("/sante")
 def sante():
     return {"statut": "ok"}
+
+
+# ------------------------------------------------------------------
+# Journalisation des erreurs
+# En cas d'anomalie, la trace complete part dans les journaux du serveur :
+# indispensable pour diagnostiquer une application deployee.
+# ------------------------------------------------------------------
+import logging
+import traceback
+
+logging.basicConfig(level=logging.INFO)
+journal_app = logging.getLogger("tests-candidats")
+
+
+@app.exception_handler(Exception)
+async def toute_erreur(request: Request, exc: Exception):
+    journal_app.error(
+        "Erreur sur %s %s\n%s",
+        request.method, request.url.path, traceback.format_exc(),
+    )
+    return Response(
+        content="Une erreur est survenue. Le cabinet a ete informe.",
+        status_code=500, media_type="text/plain; charset=utf-8",
+    )
+
+
+@app.get("/sante/base")
+def sante_base():
+    """Verifie que la base repond. Utile juste apres un deploiement."""
+    try:
+        with db.curseur() as cur:
+            cur.execute("SELECT count(*) AS n FROM test")
+            n = cur.fetchone()["n"]
+        return {"base": "ok", "tests_en_base": n}
+    except Exception as e:
+        return {"base": "erreur", "detail": str(e)[:300]}

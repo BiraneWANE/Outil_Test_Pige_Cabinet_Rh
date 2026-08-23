@@ -10,19 +10,27 @@ except ImportError:
 
 import psycopg
 from psycopg.rows import dict_row
-from psycopg_pool import ConnectionPool
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("La variable d'environnement DATABASE_URL n'est pas definie.")
 
-pool = ConnectionPool(DATABASE_URL, min_size=1, max_size=5, open=True)
+def _url():
+    """Lue a chaque appel plutot qu'a l'import : l'application demarre meme
+    si la configuration est incomplete, et le message d'erreur est clair."""
+    url = os.environ.get("DATABASE_URL")
+    if not url:
+        raise RuntimeError("La variable d'environnement DATABASE_URL n'est pas definie.")
+    return url
 
 
 @contextmanager
 def curseur():
-    """Ouvre un curseur, valide la transaction si tout se passe bien."""
-    with pool.connection() as conn:
+    """
+    Ouvre une connexion, rend un curseur, valide la transaction en sortie.
+
+    Une connexion par requete plutot qu'un pool : sur le volume de ce cabinet,
+    quelques dizaines de passations par mois, le pool n'apporte rien et
+    introduit une dependance de plus. Le code est plus simple et plus robuste.
+    """
+    with psycopg.connect(_url(), connect_timeout=15) as conn:
         with conn.cursor(row_factory=dict_row) as cur:
             yield cur
 
