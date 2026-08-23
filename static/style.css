@@ -102,6 +102,14 @@ tr.faux  td { background: #fdf6f6; }
 }
 .bouton-lien:hover { filter: brightness(1.1); }
 
+/* Bouton discret dans un tableau : la suppression ne doit pas attirer
+   l'oeil plus que le resultat lui-meme. */
+button.mini {
+  margin-top: 0; padding: 5px 10px; font-size: 0.78rem; font-weight: 500;
+  background: #fff; color: var(--alerte); border: 1px solid #e6c9c9;
+}
+button.mini:hover { background: #fdf6f6; filter: none; }
+
 .guide { white-space: pre-wrap; font-size: 0.95rem; line-height: 1.6; }
 .guide h2, .guide h3 { font-size: 1rem; }
 

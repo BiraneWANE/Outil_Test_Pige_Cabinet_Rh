@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block titre %}Données personnelles{% endblock %}
+{% block contenu %}
+<h1>Données personnelles</h1>
+<p class="chapeau">Ce que la plateforme conserve, pendant combien de temps,
+et ce qui est effacé automatiquement. <a class="lien" href="/admin">Retour aux invitations</a></p>
+
+{% if purgees is not none %}
+<div class="encadre">
+  <p>{{ purgees }} invitation(s) anonymisée(s).</p>
+</div>
+{% endif %}
+
+<div class="cartes">
+  <div class="carte"><span class="gros">{{ etat.total }}</span>passations enregistrées</div>
+  <div class="carte"><span class="gros">{{ etat.nominatives }}</span>encore nominatives</div>
+  <div class="carte"><span class="gros">{{ etat.anonymisees }}</span>déjà anonymisées</div>
+  <div class="carte"><span class="gros {{ 'alerte-texte' if etat.a_purger }}">{{ etat.a_purger }}</span>à purger aujourd'hui</div>
+</div>
+
+<div class="encadre">
+  <h2>Règle appliquée</h2>
+  <p>Les nom, adresse électronique et poste visé sont conservés
+     <b>{{ jours_conservation }} jours</b> après la création de l'invitation, puis
+     effacés automatiquement. Le lien d'accès au test, lui, expire au bout de
+     {{ jours_validite }} jours.</p>
+  <p>Après ce délai, la passation est anonymisée et non supprimée : les réponses,
+     les temps et le score restent, sans aucun élément permettant d'identifier
+     le candidat. Ils servent uniquement à mesurer la qualité des questions.
+     Le guide d'entretien, lui, est supprimé, car c'est un texte libre.</p>
+  {% if etat.prochaine_purge %}
+  <p class="petit">Prochaine échéance : {{ etat.prochaine_purge.strftime('%d/%m/%Y') }}.</p>
+  {% else %}
+  <p class="petit">Aucune donnée nominative en attente de purge.</p>
+  {% endif %}
+</div>
+
+<div class="encadre">
+  <h2>Déclenchement</h2>
+  <p>L'hébergement ne fournit pas de planificateur. La purge est donc lancée au
+     démarrage du serveur, puis au plus une fois par jour à l'ouverture de cette
+     interface. Vous pouvez aussi la déclencher maintenant : le traitement est
+     le même, il ne touche que les passations dont le délai est dépassé.</p>
+  <form method="post" action="/admin/rgpd/purger">
+    <button type="submit">Lancer la purge maintenant</button>
+  </form>
+</div>
+
+<h2>Droits des candidats</h2>
+<div class="encadre discret">
+  <p><b>Accès.</b> Le rapport PDF de la passation constitue la copie des données
+     traitées : il suffit de le télécharger depuis le résultat et de l'envoyer.</p>
+  <p><b>Effacement.</b> Le bouton « supprimer » de la liste des invitations
+     détruit définitivement la passation et tout ce qui s'y rattache : réponses,
+     résultat, signalements, journal et guide d'entretien.</p>
+  <p><b>Information.</b> Elle est présentée au candidat avant le démarrage du
+     test, et son acceptation est horodatée.</p>
+</div>
+
+<h2>Dernières purges</h2>
+{% if purges %}
+<table>
+  <thead><tr><th>Date</th><th>Passation</th><th>Opération</th></tr></thead>
+  <tbody>
+  {% for p in purges %}
+    <tr>
+      <td>{{ p.horodatage|heure }}</td>
+      <td>{{ p.invitation_id }}</td>
+      <td>{{ p.detail }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="petit">Aucune purge enregistrée pour l'instant.</p>
+{% endif %}
+{% endblock %}

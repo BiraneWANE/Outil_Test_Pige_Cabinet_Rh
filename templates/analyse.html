@@ -40,16 +40,16 @@
    Un écart-type faible signifie que le test ne sépare pas les candidats.</p>
 {% endif %}
 
-{% if items %}
+{% if test.type_test == 'technique' %}
 <h2>Qualité des questions</h2>
-{% if not items.fiable %}
+{% if not items_fiable %}
 <div class="encadre alerte">
-  <p>Seulement {{ items.effectif }} passation(s). En dessous de trente, ces
+  <p>Seulement {{ items_effectif }} passation(s). En dessous de trente, ces
      indicateurs donnent une tendance, pas une mesure. Ne retirez pas une
      question sur cette seule base.</p>
 </div>
 {% else %}
-<p class="petit">Calculé sur {{ items.effectif }} passations.</p>
+<p class="petit">Calculé sur {{ items_effectif }} passations.</p>
 {% endif %}
 
 <table>
@@ -58,7 +58,7 @@
         <th>Temps médian</th><th>Signalement</th></tr>
   </thead>
   <tbody>
-  {% for i in items.items %}
+  {% for i in items %}
     <tr class="{{ 'faux' if i.alertes }}">
       <td>{{ i.numero }}</td>
       <td>{{ i.taux_reussite }} %</td>
@@ -73,9 +73,9 @@
    <b>Discrimination</b> : lien entre réussir cette question et bien réussir
    l'ensemble. En dessous de 0,10, la question ne sépare pas les candidats et son
    énoncé est probablement ambigu.</p>
-{% if items.a_revoir %}
+{% if items_a_revoir %}
 <div class="encadre alerte">
-  <p><b>Questions à revoir :</b> {{ items.a_revoir | join(', ') }}</p>
+  <p><b>Questions à revoir :</b> {{ items_a_revoir | join(', ') }}</p>
 </div>
 {% endif %}
 {% endif %}

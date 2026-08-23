@@ -9,6 +9,7 @@ Lancement en local :
 """
 import os
 import secrets
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from urllib.parse import quote
 
@@ -30,8 +31,29 @@ import analyse
 import rapport_pdf
 import ia
 import affichage
+import rgpd
 
-app = FastAPI(title="Tests candidats")
+
+@asynccontextmanager
+async def cycle_de_vie(app):
+    """
+    Purge des donnees echues au demarrage du serveur.
+
+    L'hebergement ne propose pas de planificateur : ce passage, complete
+    par celui du back-office, suffit largement pour une conservation
+    exprimee en mois. Une base injoignable ne doit pas empecher le
+    serveur de demarrer, d'ou le filet.
+    """
+    try:
+        n = rgpd.purger_si_besoin()
+        if n:
+            print(f"[rgpd] {n} invitation(s) anonymisee(s) au demarrage")
+    except Exception as e:
+        print(f"[rgpd] purge impossible au demarrage : {e}")
+    yield
+
+
+app = FastAPI(title="Tests candidats", lifespan=cycle_de_vie)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
@@ -272,13 +294,22 @@ def fin(request: Request, token: str):
 # ==================================================================
 
 @app.get("/admin", response_class=HTMLResponse)
-def admin(request: Request, utilisateur: str = Depends(recruteur)):
+def admin(request: Request, supprime: str = None,
+          utilisateur: str = Depends(recruteur)):
+    # Deuxieme declencheur de la purge, au plus une fois par jour. Une
+    # erreur ici ne doit pas empecher le recruteur de travailler.
+    try:
+        rgpd.purger_si_besoin()
+    except Exception as e:
+        print(f"[rgpd] purge impossible : {e}")
+
     return templates.TemplateResponse(request, "admin.html", {
         "request": request,
         "tests": db.liste_tests(),
         "invitations": db.liste_invitations(),
         "url_publique": URL_PUBLIQUE,
         "utilisateur": utilisateur,
+        "supprime": supprime,
     })
 
 
@@ -289,6 +320,44 @@ def inviter(test_id: int = Form(...), nom: str = Form(""), email: str = Form("")
     db.creer_invitation(token, test_id, nom or None, email or None, poste or None,
                         utilisateur, JOURS_VALIDITE, JOURS_CONSERVATION)
     return RedirectResponse("/admin", status_code=303)
+
+
+# ==================================================================
+# Donnees personnelles : conservation, purge, suppression
+# ==================================================================
+
+@app.get("/admin/rgpd", response_class=HTMLResponse)
+def page_rgpd(request: Request, purgees: int = None,
+              utilisateur: str = Depends(recruteur)):
+    return templates.TemplateResponse(request, "rgpd.html", {
+        "request": request,
+        "etat": db.etat_conservation(),
+        "purges": db.journal_des_purges(),
+        "jours_conservation": JOURS_CONSERVATION,
+        "jours_validite": JOURS_VALIDITE,
+        "purgees": purgees,
+    })
+
+
+@app.post("/admin/rgpd/purger")
+def lancer_purge(utilisateur: str = Depends(recruteur)):
+    """Meme traitement que la purge automatique, declenche a la main."""
+    n = rgpd.purger()
+    return RedirectResponse(f"/admin/rgpd?purgees={n}", status_code=303)
+
+
+@app.post("/admin/invitation/{invitation_id}/supprimer")
+def supprimer_invitation(invitation_id: int, utilisateur: str = Depends(recruteur)):
+    """
+    Suppression definitive d'une passation, sur demande du candidat ou
+    pour retirer un essai. Tout ce qui s'y rattache disparait.
+    """
+    ligne = db.supprimer_invitation(invitation_id)
+    if ligne is None:
+        raise HTTPException(404, "Cette invitation n'existe pas ou plus.")
+    return RedirectResponse(
+        f"/admin?supprime={quote(ligne['nom'] or 'sans nom')}", status_code=303
+    )
 
 
 @app.get("/admin/resultat/{invitation_id}", response_class=HTMLResponse)
@@ -344,7 +413,14 @@ def analyser(request: Request, test_id: int, utilisateur: str = Depends(recruteu
     }
 
     if test["type_test"] == "technique":
-        contexte["items"] = analyse.analyser_items(db.lignes_analyse(test_id))
+        # Les mesures sont passees a plat plutot que sous forme de
+        # dictionnaire : dans un gabarit, "mesure.items" designe la methode
+        # items() du dictionnaire, pas la cle du meme nom.
+        mesure = analyse.analyser_items(db.lignes_analyse(test_id))
+        contexte["items"] = mesure["items"]
+        contexte["items_effectif"] = mesure["effectif"]
+        contexte["items_fiable"] = mesure["fiable"]
+        contexte["items_a_revoir"] = mesure.get("a_revoir", [])
     else:
         contexte["profils"] = analyse.profils_agreges(resultats)
         contexte["situations"] = analyse.frequence_situations(resultats)

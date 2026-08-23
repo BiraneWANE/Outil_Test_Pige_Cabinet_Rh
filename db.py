@@ -439,3 +439,114 @@ def compter_evenements(invitation_id, evenement):
             (invitation_id, evenement),
         )
         return cur.fetchone()["n"]
+
+
+# ------------------------------------------------------------------
+# RGPD : purge automatique et suppression a la demande
+# ------------------------------------------------------------------
+
+NOMINATIVE = "(candidat_nom IS NOT NULL OR candidat_email IS NOT NULL)"
+
+
+def invitations_a_purger(limite=500):
+    """Invitations dont la duree de conservation est depassee et qui
+    portent encore des donnees nominatives."""
+    with curseur() as cur:
+        cur.execute(
+            f"""
+            SELECT id, purge_apres
+              FROM invitation
+             WHERE purge_apres < CURRENT_DATE
+               AND {NOMINATIVE}
+             ORDER BY purge_apres
+             LIMIT %s
+            """,
+            (limite,),
+        )
+        return cur.fetchall()
+
+
+def anonymiser(invitation_id):
+    """
+    Efface les donnees nominatives et conserve la mesure.
+
+    Le token est neutralise pour qu'un ancien lien ne rouvre plus rien, et
+    le guide d'entretien est supprime : c'est un texte libre, il peut citer
+    des elements personnels. Les reponses, les temps et le score restent :
+    ils alimentent l'analyse des questions sans identifier personne.
+    """
+    with curseur() as cur:
+        cur.execute(
+            "DELETE FROM guide_entretien WHERE invitation_id = %s",
+            (invitation_id,),
+        )
+        cur.execute(
+            """
+            UPDATE invitation
+               SET candidat_nom = NULL,
+                   candidat_email = NULL,
+                   poste_vise = NULL,
+                   token = 'purge_' || id
+             WHERE id = %s
+            """,
+            (invitation_id,),
+        )
+        cur.execute(
+            "INSERT INTO journal (invitation_id, evenement, detail) "
+            "VALUES (%s, %s, %s)",
+            (invitation_id, "purge", "anonymisation, duree de conservation depassee"),
+        )
+
+
+def supprimer_invitation(invitation_id):
+    """
+    Suppression definitive, sans retour possible.
+
+    Les tables liees sont declarees ON DELETE CASCADE : reponses, resultat,
+    journal, vues, anomalies et guide d'entretien partent avec l'invitation.
+    Renvoie {"nom": ...} pour le message de confirmation, ou None si
+    l'invitation n'existe pas. Un dictionnaire plutot que le nom seul :
+    une invitation deja anonymisee n'a plus de nom, et il ne faut pas
+    confondre ce cas avec une invitation introuvable.
+    """
+    with curseur() as cur:
+        cur.execute(
+            "SELECT candidat_nom FROM invitation WHERE id = %s", (invitation_id,)
+        )
+        ligne = cur.fetchone()
+        if not ligne:
+            return None
+        cur.execute("DELETE FROM invitation WHERE id = %s", (invitation_id,))
+        return {"nom": ligne["candidat_nom"]}
+
+
+def etat_conservation():
+    """Chiffres affiches sur la page « Donnees personnelles »."""
+    with curseur() as cur:
+        cur.execute(
+            f"""
+            SELECT count(*) AS total,
+                   count(*) FILTER (WHERE {NOMINATIVE}) AS nominatives,
+                   count(*) FILTER (WHERE NOT {NOMINATIVE}) AS anonymisees,
+                   count(*) FILTER (WHERE purge_apres < CURRENT_DATE
+                                      AND {NOMINATIVE}) AS a_purger,
+                   min(purge_apres) FILTER (WHERE {NOMINATIVE}) AS prochaine_purge
+              FROM invitation
+            """
+        )
+        return cur.fetchone()
+
+
+def journal_des_purges(limite=15):
+    with curseur() as cur:
+        cur.execute(
+            """
+            SELECT invitation_id, detail, horodatage
+              FROM journal
+             WHERE evenement = 'purge'
+             ORDER BY horodatage DESC
+             LIMIT %s
+            """,
+            (limite,),
+        )
+        return cur.fetchall()

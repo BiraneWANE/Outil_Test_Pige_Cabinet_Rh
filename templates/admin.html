@@ -2,7 +2,15 @@
 {% block titre %}Back-office{% endblock %}
 {% block contenu %}
 <h1>Invitations</h1>
-<p class="chapeau">Connecté en tant que {{ utilisateur }} — <a class="lien" href="/admin/analyse">analyse des tests</a></p>
+<p class="chapeau">Connecté en tant que {{ utilisateur }} —
+   <a class="lien" href="/admin/analyse">analyse des tests</a> —
+   <a class="lien" href="/admin/rgpd">données personnelles</a></p>
+
+{% if supprime %}
+<div class="encadre alerte">
+  <p>Passation de « {{ supprime }} » supprimée définitivement.</p>
+</div>
+{% endif %}
 
 <div class="encadre">
   <h2>Créer une invitation</h2>
@@ -27,7 +35,7 @@
   <thead>
     <tr>
       <th>Candidat</th><th>Test</th><th>Statut</th>
-      <th>Résultat</th><th>Lien</th>
+      <th>Résultat</th><th>Lien</th><th></th>
     </tr>
   </thead>
   <tbody>
@@ -49,6 +57,12 @@
       </td>
       <td><input class="lien-copiable" readonly
                  value="{{ url_publique }}/t/{{ i.token }}"></td>
+      <td>
+        <form method="post" action="/admin/invitation/{{ i.id }}/supprimer"
+              onsubmit="return confirm('Supprimer définitivement cette passation ? Les réponses, le résultat et le rapport seront perdus.');">
+          <button class="mini" type="submit" title="Suppression définitive">supprimer</button>
+        </form>
+      </td>
     </tr>
   {% endfor %}
   </tbody>

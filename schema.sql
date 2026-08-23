@@ -125,9 +125,12 @@ CREATE TABLE IF NOT EXISTS journal (
 );
 
 -- ============================================================
--- Purge RGPD : a executer une fois par jour
--- Efface les donnees personnelles et conserve un resultat anonyme
+-- Purge RGPD
+-- Implementee dans rgpd.py et db.anonymiser() : declenchee au demarrage du
+-- serveur, une fois par jour a l'ouverture du back-office, ou a la demande
+-- depuis /admin/rgpd. Requete equivalente, pour memoire :
 -- ============================================================
 -- UPDATE invitation
---    SET candidat_nom = NULL, candidat_email = NULL, token = 'purge_' || id
+--    SET candidat_nom = NULL, candidat_email = NULL, poste_vise = NULL,
+--        token = 'purge_' || id
 --  WHERE purge_apres < CURRENT_DATE;
