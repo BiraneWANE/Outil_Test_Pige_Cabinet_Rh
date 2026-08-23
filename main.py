@@ -116,16 +116,17 @@ def finaliser(inv):
 def accueil(request: Request, token: str):
     inv, etat = charger_invitation(token)
     if etat == "terminee":
-        return templates.TemplateResponse("fin.html", {"request": request, "inv": inv})
+        return templates.TemplateResponse(request, "fin.html", {"request": request, "inv": inv})
     if etat != "ok":
         return templates.TemplateResponse(
-            "indisponible.html", {"request": request, "etat": etat}, status_code=410
+            request, "indisponible.html", {"request": request, "etat": etat},
+            status_code=410
         )
     if inv["demarre_le"]:
         return RedirectResponse(f"/t/{token}/q/1", status_code=303)
 
     db.journaliser(inv["id"], "ouverture")
-    return templates.TemplateResponse("accueil.html", {"request": request, "inv": inv})
+    return templates.TemplateResponse(request, "accueil.html", {"request": request, "inv": inv})
 
 
 @app.post("/t/{token}/demarrer")
@@ -147,7 +148,8 @@ def afficher_question(request: Request, token: str, numero: int):
         return RedirectResponse(f"/t/{token}/fin", status_code=303)
     if etat != "ok":
         return templates.TemplateResponse(
-            "indisponible.html", {"request": request, "etat": etat}, status_code=410
+            request, "indisponible.html", {"request": request, "etat": etat},
+            status_code=410
         )
     if not inv["demarre_le"]:
         return RedirectResponse(f"/t/{token}", status_code=303)
@@ -166,7 +168,7 @@ def afficher_question(request: Request, token: str, numero: int):
     db.marquer_vue(inv["id"], q["id"])
     deja = {r["option_id"] for r in db.reponses_de(inv["id"], q["id"])}
 
-    return templates.TemplateResponse("question.html", {
+    return templates.TemplateResponse(request, "question.html", {
         "request": request, "inv": inv, "q": q, "numero": numero,
         "total": total, "restant": restant, "deja": deja,
         "multiple": q["format"] == "multiple",
@@ -236,7 +238,7 @@ def confirmer_fin(request: Request, token: str):
         return RedirectResponse(f"/t/{token}/fin", status_code=303)
     total = db.nombre_questions(inv["test_id"])
     repondues = {r["question_id"] for r in db.reponses_de(inv["id"])}
-    return templates.TemplateResponse("terminer.html", {
+    return templates.TemplateResponse(request, "terminer.html", {
         "request": request, "inv": inv, "total": total,
         "repondues": len(repondues), "restant": secondes_restantes(inv),
     })
@@ -255,7 +257,7 @@ def fin(request: Request, token: str):
     inv = db.invitation_par_token(token)
     if not inv:
         raise HTTPException(404)
-    return templates.TemplateResponse("fin.html", {"request": request, "inv": inv})
+    return templates.TemplateResponse(request, "fin.html", {"request": request, "inv": inv})
 
 
 # ==================================================================
@@ -264,7 +266,7 @@ def fin(request: Request, token: str):
 
 @app.get("/admin", response_class=HTMLResponse)
 def admin(request: Request, utilisateur: str = Depends(recruteur)):
-    return templates.TemplateResponse("admin.html", {
+    return templates.TemplateResponse(request, "admin.html", {
         "request": request,
         "tests": db.liste_tests(),
         "invitations": db.liste_invitations(),
@@ -298,7 +300,7 @@ def voir_resultat(request: Request, invitation_id: int, erreur: str = None,
             (invitation_id,),
         )
         inv = cur.fetchone()
-    return templates.TemplateResponse("resultat.html", {
+    return templates.TemplateResponse(request, "resultat.html", {
         "request": request, "inv": inv, "res": res, "d": res["detail"],
         "anomalies": db.anomalies_de(invitation_id),
         "guide": db.guide_de(invitation_id),
@@ -313,7 +315,7 @@ def voir_resultat(request: Request, invitation_id: int, erreur: str = None,
 
 @app.get("/admin/analyse", response_class=HTMLResponse)
 def choisir_analyse(request: Request, utilisateur: str = Depends(recruteur)):
-    return templates.TemplateResponse("analyse_index.html", {
+    return templates.TemplateResponse(request, "analyse_index.html", {
         "request": request, "tests": db.liste_tests(),
     })
 
@@ -341,7 +343,7 @@ def analyser(request: Request, test_id: int, utilisateur: str = Depends(recruteu
         contexte["situations"] = analyse.frequence_situations(resultats)
         contexte["effectif"] = len(resultats)
 
-    return templates.TemplateResponse("analyse.html", contexte)
+    return templates.TemplateResponse(request, "analyse.html", contexte)
 
 
 @app.post("/admin/resultat/{invitation_id}/guide")
