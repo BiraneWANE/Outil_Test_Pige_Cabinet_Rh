@@ -3,13 +3,20 @@
 Ce document s'adresse à la personne qui fait passer les tests. Aucune
 connaissance technique n'est nécessaire.
 
+**Adresse de l'application : https://tests-candidats.onrender.com/admin**
+
+Mettez-la en favori. Le navigateur demande un identifiant et un mot de passe.
+L'identifiant est libre, il sert seulement à savoir qui a créé l'invitation ; le
+mot de passe vous a été transmis séparément et ne doit pas circuler par courriel.
+
+L'application est disponible en permanence, pour vous comme pour les candidats.
+Les pages s'ouvrent en quelques secondes, à toute heure.
+
 ---
 
 ## Faire passer un test à un candidat
 
-1. Ouvrez l'adresse de l'application suivie de `/admin`. Le navigateur demande un
-   identifiant et un mot de passe. L'identifiant est libre, il sert seulement à
-   savoir qui a créé l'invitation.
+1. Ouvrez l'application et identifiez-vous.
 2. Dans l'encadré **Créer une invitation**, choisissez le test, saisissez le nom
    du candidat, puis cliquez sur **Générer le lien**.
 3. La ligne apparaît dans le tableau. Copiez le lien affiché à droite et
@@ -19,7 +26,9 @@ Un lien correspond à un candidat et à un seul test. Pour faire passer le test
 technique **et** le questionnaire de positionnement à la même personne, créez
 deux invitations et envoyez les deux liens.
 
-Le lien reste valable une semaine. Passé ce délai, il faut en générer un nouveau.
+Le lien reste valable **quatre jours**. Passé ce délai, il faut en générer un
+nouveau. Tenez-en compte pour vos envois de fin de semaine : un lien envoyé le
+vendredi soir n'est plus valable le mercredi suivant.
 
 ---
 
@@ -36,6 +45,9 @@ La colonne **Statut** indique où en est chaque candidat :
 
 Le résultat apparaît automatiquement dès la validation. Cliquez sur **détail**
 pour ouvrir la fiche complète.
+
+À droite de chaque ligne, un bouton **supprimer** efface définitivement la
+passation. Voir plus bas, « Supprimer une passation ».
 
 ---
 
@@ -146,9 +158,20 @@ grand-chose : il ne sépare personne.
 
 Les questions problématiques sont surlignées et récapitulées en bas.
 
-**Attention à l'effectif.** En dessous de trente passations, l'application vous
-affiche un avertissement. Ces indicateurs deviennent fiables avec du volume : ne
-retirez jamais une question sur la base de cinq candidats.
+**Attention à l'effectif.** L'application se tait tant qu'elle n'a pas de quoi
+parler, et c'est volontaire :
+
+- **moins de dix passations** : aucun signalement n'est émis. Avec deux ou trois
+  candidats, toute question réussie paraîtrait « trop facile » et toute question
+  ratée « trop difficile ». Ce seraient des artefacts, pas des mesures. Les taux
+  restent affichés à titre indicatif.
+- **entre dix et trente** : les signalements apparaissent, accompagnés d'un
+  avertissement. C'est une tendance, pas une mesure.
+- **au-delà de trente** : les indicateurs deviennent exploitables.
+
+Ne retirez jamais une question sur la base de cinq candidats. À votre volume,
+une douzaine de passations par mois, comptez plusieurs mois avant que cette page
+ne devienne vraiment parlante.
 
 ---
 
@@ -163,14 +186,41 @@ carnet d'analyse.
 
 ## Les données personnelles
 
-Le candidat est informé avant de démarrer et doit cocher une case.
+Le candidat est informé avant de démarrer et doit cocher une case. Cette
+acceptation est horodatée.
 
-Chaque invitation porte une date de suppression, fixée à six mois par défaut. Une
-tâche automatique efface alors le nom et l'adresse électronique, en conservant le
-résultat sans identité pour les statistiques.
+Depuis le back-office, le lien **données personnelles** ouvre une page qui montre
+en un coup d'œil combien de passations sont encore nominatives, combien sont déjà
+anonymisées, et à quelle date tombe la prochaine échéance.
 
-Si un candidat demande l'accès à ses réponses ou leur effacement, c'est possible :
-la demande se traite depuis la base, faites-la remonter.
+**L'effacement automatique.** Chaque invitation porte une date de suppression,
+fixée à six mois. À l'échéance, le nom, l'adresse électronique et le poste visé
+sont effacés, le lien d'accès est neutralisé et le guide d'entretien supprimé. Ce
+qui reste, réponses, temps et score, ne permet plus d'identifier personne et sert
+à mesurer la qualité des questions. Vous n'avez rien à faire : la purge se
+déclenche toute seule. Le bouton **Lancer la purge maintenant** ne sert qu'à la
+provoquer plus tôt, et ne touche jamais une passation dont le délai n'est pas
+écoulé.
+
+**Si un candidat demande l'accès à ses données**, le rapport PDF de sa passation
+constitue la copie de ce qui est traité : téléchargez-le et envoyez-le lui.
+
+**S'il demande leur effacement**, utilisez le bouton **supprimer** de sa ligne.
+Vous n'avez plus besoin de faire remonter la demande.
+
+Comptez un mois maximum pour répondre à ce type de demande.
+
+---
+
+## Supprimer une passation
+
+À droite de chaque ligne du tableau, le bouton **supprimer** détruit
+définitivement la passation : les réponses, le résultat, les signalements, le
+rapport PDF et le guide d'entretien. Une confirmation est demandée.
+
+**Il n'y a pas de corbeille et pas de retour en arrière.** Utilisez ce bouton
+pour une demande d'effacement d'un candidat, ou pour retirer un essai. Dans le
+doute, ne supprimez pas : les données partent d'elles-mêmes au bout de six mois.
 
 ---
 
@@ -188,9 +238,9 @@ c'est volontaire, sinon la durée ne voudrait plus rien dire.
 question y figure. Si une question vous semble mal corrigée, signalez-la, elle se
 modifie dans le fichier des questions.
 
-**L'application ne répond plus.** Elle est hébergée : il faut la relancer depuis
-la console de l'hébergeur. C'est le seul cas qui demande une intervention
-technique.
+**L'application ne répond plus.** C'est le seul cas qui demande une intervention
+technique : signalez-le, la console de l'hébergeur dira ce qui se passe. Précisez
+si c'est une page blanche, un message d'erreur, ou une attente sans fin.
 
 ---
 
@@ -236,9 +286,12 @@ pas une protection.
 candidat quitte la page pendant l'épreuve, ainsi que les tentatives de copie. Ces
 éléments apparaissent dans les signalements automatiques de la fiche de résultat.
 
-Attention à la lecture : quitter la page ne prouve rien. Un candidat peut avoir
-répondu au téléphone ou basculé sur sa messagerie. Six sorties sur un test de vingt
-minutes méritent une question en entretien, pas une conclusion.
+Attention à la lecture : quitter la page ne prouve rien, et c'est encore plus vrai
+sur téléphone, où verrouiller l'écran ou recevoir une notification suffit à
+déclencher le compteur. Les absences de moins de deux secondes ne sont pas
+comptées, et il en faut au moins huit pour que l'application parle d'« attention ».
+Entre trois et sept, elle se contente de vous en informer. Dans tous les cas,
+c'est une question à poser en entretien, jamais une conclusion.
 
 **Ce qui fonctionne vraiment.** Reprendre en entretien trois questions du test et
 demander au candidat d'expliquer son raisonnement. Celui qui a répondu seul le fait
@@ -247,3 +300,31 @@ minutes.
 
 Un test non surveillé filtre, il ne prouve pas. C'est vrai de tous les tests à
 distance, y compris ceux des éditeurs spécialisés.
+
+---
+
+## Votre prise en main, en dix minutes
+
+À faire une fois, avec quelqu'un à côté de vous. Le mieux est de passer vous-même
+un test en entier : vous verrez exactement ce que voit un candidat.
+
+1. Ouvrez l'application, identifiez-vous, mettez l'adresse en favori.
+2. Créez une invitation à votre nom, sur un test court.
+3. Ouvrez le lien dans une autre fenêtre et passez le test jusqu'au bout.
+4. Revenez au tableau, ouvrez le **détail** de votre résultat.
+5. Téléchargez le **PDF** : c'est ce que recevra le client.
+6. Ouvrez **données personnelles** et lisez les quatre compteurs.
+7. Supprimez votre passation d'essai avec le bouton **supprimer**.
+
+Si ces sept gestes vous sont familiers, vous savez tout faire.
+
+---
+
+## Questions à poser avant de commencer
+
+- Quatre jours de validité pour les liens, est-ce le bon délai ?
+- Six mois de conservation des données nominatives, faut-il raccourcir ?
+- Voulez-vous la fonction de guide d'entretien automatique, ou préférez-vous
+  qu'elle reste désactivée ?
+- Le registre des traitements attend votre raison sociale et une adresse de
+  contact pour les candidats.
