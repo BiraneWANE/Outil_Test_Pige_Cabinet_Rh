@@ -4,7 +4,18 @@
 <h1>Invitations</h1>
 <p class="chapeau">Connecté en tant que {{ utilisateur }} —
    <a class="lien" href="/admin/analyse">analyse des tests</a> —
-   <a class="lien" href="/admin/rgpd">données personnelles</a></p>
+   <a class="lien" href="/admin/rgpd">données personnelles</a> —
+   <a class="lien" href="/admin/sauvegardes">sauvegardes</a></p>
+
+{% if sauvegarde and sauvegarde.rappel %}
+<div class="encadre alerte">
+  <p><b>Aucune copie de la base sur votre ordinateur.</b>
+  {% if sauvegarde.dernier_telechargement %}
+     Le dernier téléchargement remonte à {{ sauvegarde.jours_depuis_telechargement }} jours.
+  {% endif %}
+  <a class="lien" href="/admin/sauvegarde">Télécharger la sauvegarde</a></p>
+</div>
+{% endif %}
 
 {% if supprime %}
 <div class="encadre alerte">

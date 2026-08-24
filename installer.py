@@ -60,6 +60,7 @@ def main():
         print("Creation des tables...")
         executer_fichier(conn, "schema.sql")
         executer_fichier(conn, "schema_analyse.sql")
+        executer_fichier(conn, "schema_sauvegarde.sql")
 
         print("\nControle...")
         tables = conn.execute(

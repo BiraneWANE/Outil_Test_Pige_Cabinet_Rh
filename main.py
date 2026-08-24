@@ -33,12 +33,13 @@ import rapport_pdf
 import ia
 import affichage
 import rgpd
+import sauvegarde
 
 
 @asynccontextmanager
 async def cycle_de_vie(app):
     """
-    Purge des donnees echues au demarrage du serveur, dans un fil separe.
+    Purge des donnees echues et copie de sauvegarde, dans un fil separe.
 
     Le fil separe n'est pas un detail : uvicorn n'ouvre son port qu'apres
     avoir execute ce code de demarrage, et l'hebergeur considere qu'un
@@ -58,8 +59,17 @@ async def cycle_de_vie(app):
                 print(f"[rgpd] {n} invitation(s) anonymisee(s) au demarrage")
         except Exception as e:
             print(f"[rgpd] purge impossible au demarrage : {e}")
+        # La copie du jour suit la purge : elle enregistre donc l'etat
+        # deja nettoye, ce qui est bien ce qu'on veut conserver.
+        try:
+            resume = sauvegarde.sauvegarder_si_besoin()
+            if resume:
+                print(f"[sauvegarde] copie du jour : "
+                      f"{resume['total_lignes']} lignes")
+        except Exception as e:
+            print(f"[sauvegarde] copie impossible au demarrage : {e}")
 
-    threading.Thread(target=tache, name="purge-rgpd", daemon=True).start()
+    threading.Thread(target=tache, name="entretien", daemon=True).start()
     yield
 
 
@@ -313,6 +323,16 @@ def admin(request: Request, supprime: str = None,
     except Exception as e:
         print(f"[rgpd] purge impossible : {e}")
 
+    # Second declencheur de la copie quotidienne, pour les journees ou le
+    # serveur ne redemarre pas. Meme principe que la purge : une erreur
+    # ici ne doit pas empecher le recruteur de travailler.
+    etat_sauvegarde = None
+    try:
+        sauvegarde.sauvegarder_si_besoin()
+        etat_sauvegarde = sauvegarde.etat()
+    except Exception as e:
+        print(f"[sauvegarde] copie impossible : {e}")
+
     return templates.TemplateResponse(request, "admin.html", {
         "request": request,
         "tests": db.liste_tests(),
@@ -320,6 +340,7 @@ def admin(request: Request, supprime: str = None,
         "url_publique": URL_PUBLIQUE,
         "utilisateur": utilisateur,
         "supprime": supprime,
+        "sauvegarde": etat_sauvegarde,
     })
 
 
@@ -553,6 +574,56 @@ def exporter(utilisateur: str = Depends(recruteur)):
         content=tampon.getvalue().encode("utf-8-sig"),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=passations.csv"},
+    )
+
+
+# ==================================================================
+# Sauvegarde de la base
+# ==================================================================
+
+@app.get("/admin/sauvegardes", response_class=HTMLResponse)
+def page_sauvegardes(request: Request, utilisateur: str = Depends(recruteur)):
+    return templates.TemplateResponse(request, "sauvegardes.html", {
+        "request": request,
+        "etat": sauvegarde.etat(),
+        "copies": sauvegarde.liste(),
+        "jours_historique": sauvegarde.JOURS_HISTORIQUE,
+        "jours_avant_rappel": sauvegarde.JOURS_AVANT_RAPPEL,
+    })
+
+
+@app.get("/admin/sauvegarde")
+def telecharger_sauvegarde(utilisateur: str = Depends(recruteur)):
+    """
+    Archive construite a l'instant, donc parfaitement a jour.
+
+    C'est le seul geste qui fait sortir une copie des serveurs : le
+    telechargement est donc journalise, pour pouvoir rappeler au cabinet
+    quand la derniere copie a reellement quitte l'hebergeur.
+    """
+    contenu, _ = sauvegarde.construire()
+    sauvegarde.journaliser_telechargement(utilisateur, len(contenu))
+    return Response(
+        content=contenu,
+        media_type="application/zip",
+        headers={"Content-Disposition":
+                 f'attachment; filename="{sauvegarde.nom_fichier()}"'},
+    )
+
+
+@app.get("/admin/sauvegarde/{sauvegarde_id}")
+def telecharger_copie(sauvegarde_id: int, utilisateur: str = Depends(recruteur)):
+    """Une copie automatique deja enregistree, pour revenir a un etat anterieur."""
+    ligne = sauvegarde.copie(sauvegarde_id)
+    if ligne is None:
+        raise HTTPException(404, "Cette sauvegarde n'existe plus.")
+    contenu = bytes(ligne["contenu"])
+    sauvegarde.journaliser_telechargement(utilisateur, len(contenu))
+    return Response(
+        content=contenu,
+        media_type="application/zip",
+        headers={"Content-Disposition":
+                 f'attachment; filename="{sauvegarde.nom_fichier(ligne["cree_le"])}"'},
     )
 
 

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block titre %}Sauvegardes{% endblock %}
+{% block contenu %}
+<h1>Sauvegardes</h1>
+<p class="chapeau">Une copie complète de la base, à conserver hors des serveurs.
+<a class="lien" href="/admin">Retour aux invitations</a></p>
+
+{% if etat.rappel %}
+<div class="encadre alerte">
+  <p><b>Aucune copie récente sur votre ordinateur.</b>
+  {% if etat.dernier_telechargement %}
+     Le dernier téléchargement date du {{ etat.dernier_telechargement|heure }},
+     soit {{ etat.jours_depuis_telechargement }} jours.
+  {% else %}
+     Aucune sauvegarde n'a encore été téléchargée.
+  {% endif %}
+  </p>
+</div>
+{% endif %}
+
+<div class="cartes">
+  <div class="carte"><span class="gros">{{ etat.copies }}</span>copies conservées ici</div>
+  <div class="carte"><span class="gros">{{ (etat.place_occupee / 1024) | round | int }}</span>Ko occupés</div>
+  <div class="carte">
+    <span class="gros {{ 'alerte-texte' if etat.rappel }}">
+      {% if etat.jours_depuis_telechargement is none %}—{% else %}{{ etat.jours_depuis_telechargement }}{% endif %}
+    </span>jours depuis le dernier téléchargement</div>
+</div>
+
+<div class="encadre">
+  <h2>Télécharger une sauvegarde</h2>
+  <p>L'archive contient toutes les données de la base, les scripts qui recréent
+     les tables et un mode d'emploi pour repartir sur un autre hébergeur. Elle
+     s'ouvre comme un dossier compressé ordinaire, et chaque table s'y lit aussi
+     en tableur.</p>
+  <p><a class="lien" href="/admin/sauvegarde"><b>Télécharger la sauvegarde du moment</b></a></p>
+  <p class="petit">Rangez le fichier ailleurs que sur le bureau : un espace de
+     stockage personnel ou une clé, de préférence les deux.</p>
+</div>
+
+<div class="encadre discret">
+  <h2>Ce que chaque copie protège</h2>
+  <p><b>Les copies automatiques ci-dessous</b> sont enregistrées dans la base,
+     une par jour, conservées {{ jours_historique }} jours. Elles rattrapent une
+     fausse manœuvre ou une suppression accidentelle.</p>
+  <p><b>Le fichier que vous téléchargez</b> est le seul qui sorte des serveurs.
+     C'est lui, et lui seul, qui protège si l'hébergeur de la base venait à
+     disparaître. Au-delà de {{ jours_avant_rappel }} jours sans téléchargement,
+     cette page vous le rappelle.</p>
+</div>
+
+<h2>Copies automatiques</h2>
+{% if copies %}
+<table>
+  <thead><tr><th>Date</th><th>Lignes</th><th>Taille</th><th></th></tr></thead>
+  <tbody>
+  {% for c in copies %}
+    <tr>
+      <td>{{ c.cree_le|heure }}</td>
+      <td>{{ c.nb_lignes }}</td>
+      <td>{{ (c.octets / 1024) | round | int }} Ko</td>
+      <td><a class="lien" href="/admin/sauvegarde/{{ c.id }}">télécharger</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="petit">Aucune copie automatique pour l'instant. La première est créée
+   au prochain démarrage du serveur, ou dès la prochaine ouverture du
+   back-office.</p>
+{% endif %}
+{% endblock %}

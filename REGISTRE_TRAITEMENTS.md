@@ -80,6 +80,7 @@ laisser la clé d'API vide, et la fonction disparaît de l'interface.
 | Nom, adresse électronique, poste visé | 180 jours après la création de l'invitation |
 | Guide d'entretien | Supprimé en même temps que les données nominatives |
 | Réponses, temps, score, signalements | Conservés au-delà, sous forme anonyme |
+| Copies de sauvegarde automatiques | 30 jours glissants, puis suppression |
 
 Passé le délai de 180 jours, la passation est **anonymisée** : les champs
 nominatifs sont vidés, le lien d'accès est neutralisé et le guide d'entretien
@@ -118,6 +119,24 @@ Délai de réponse visé : un mois à compter de la demande.
 - Mots de passe et clés hors du code source, dans les variables
   d'environnement de l'hébergeur.
 - Copie des énoncés désactivée, et tentatives enregistrées.
+- Sauvegarde quotidienne automatique de la base, conservée 30 jours, et
+  téléchargement d'une copie complète depuis le back-office.
+
+### Effet de la sauvegarde sur la purge
+
+Une copie prise avant une purge contient encore les données nominatives que
+la purge a effacées depuis. Trois dispositions encadrent ce décalage :
+
+- la copie du jour est faite **après** la purge, jamais avant ;
+- les copies automatiques sont détruites au bout de 30 jours, ce qui borne le
+  décalage à un mois ;
+- lors d'une demande d'effacement, la suppression définitive s'applique à la
+  base ; les copies encore présentes s'effacent d'elles-mêmes dans le mois.
+
+Les copies téléchargées par le cabinet sortent du périmètre de l'application.
+Elles contiennent des données nominatives et relèvent de la responsabilité du
+cabinet : elles doivent être conservées dans un espace protégé et détruites
+quand elles ne servent plus.
 
 ## 10. Points à revoir
 
@@ -127,3 +146,6 @@ Délai de réponse visé : un mois à compter de la demande.
   sans rien changer au code, par la variable `JOURS_CONSERVATION`.
 - Formaliser la relation de sous-traitance avec les cabinets clients si le
   cabinet agit pour leur compte.
+- Vérifier une fois par an qu'une sauvegarde téléchargée se restaure
+  réellement, sur une base d'essai. Une sauvegarde jamais restaurée n'est pas
+  une sauvegarde.
