@@ -138,6 +138,72 @@ Elles contiennent des données nominatives et relèvent de la responsabilité du
 cabinet : elles doivent être conservées dans un espace protégé et détruites
 quand elles ne servent plus.
 
+---
+
+# Second traitement : prospection commerciale
+
+Ce traitement est distinct du précédent. Il ne concerne pas les candidats mais
+les entreprises qui publient des offres d'emploi.
+
+## Finalité
+
+Identifier les entreprises qui recrutent sur les métiers du cabinet, afin de leur
+présenter ses services. Une prospection professionnelle, adressée à des personnes
+morales dans le cadre de leur activité.
+
+## Données traitées
+
+| Catégorie | Détail | Origine |
+|---|---|---|
+| Annonce | Intitulé, commune, type de contrat, date de publication, lien | API France Travail et Adzuna |
+| Entreprise | Raison sociale | Idem |
+| Contact | Adresse électronique publiée avec l'offre, exceptionnellement un nom | API France Travail |
+
+## Base légale et changement de finalité
+
+L'intérêt légitime du cabinet à faire connaître ses services (article 6.1.f).
+
+Le point sensible est assumé : ces adresses ont été publiées par les employeurs
+**pour recevoir des candidatures**. Les utiliser à des fins de prospection est un
+usage second. Il est admis en démarchage professionnel, sous réserve des mesures
+ci-dessous, qui sont toutes mises en œuvre.
+
+## Mesures prises
+
+**Adresses de fonction par défaut.** Seules les adresses génériques du type
+`contact@`, `recrutement@` ou `rh@` sont retenues dans le fichier d'envoi. Elles
+désignent une fonction et non une personne. Les adresses nominatives sont
+identifiées, comptées à part et exclues des envois sauf décision expresse.
+
+**Information dès le premier message.** Chaque courriel indique la provenance de
+l'adresse, la finalité et la fréquence, ainsi que le droit d'opposition. C'est
+l'obligation d'information de l'article 14, et c'est ce qui distingue une
+prospection régulière d'une collecte détournée.
+
+**Opposition effective et définitive.** Chaque destinataire dispose d'un lien de
+désinscription personnel, accessible sans authentification. L'opposition est
+enregistrée pour toujours : l'adresse est écartée de tous les envois suivants,
+même si l'entreprise republie une offre. Les oppositions reçues par téléphone ou
+par réponse au courriel sont saisies à la main dans le même registre.
+
+**Fréquence limitée.** Un envoi par an et par adresse.
+
+**Aucun démarchage des intermédiaires.** Les cabinets de recrutement et agences
+d'intérim sont écartés de la collecte : leurs adresses ne sont pas enregistrées.
+
+## Durée de conservation
+
+Trois ans à compter du dernier contact, conformément à la recommandation de la
+CNIL en matière de prospection. Les adresses désinscrites sont conservées
+au-delà, sous la seule forme nécessaire pour ne plus jamais les solliciter.
+
+## Point à revoir
+
+Si le volume de prospection augmente ou si la fréquence dépasse un envoi par an,
+ce traitement devra être réexaminé.
+
+---
+
 ## 10. Points à revoir
 
 - Ouvrir un accès distinct par consultante le jour où elles seront plusieurs,

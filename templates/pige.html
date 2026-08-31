@@ -28,6 +28,21 @@
   <div class="carte"><span class="gros {{ 'alerte-texte' if etat.anciennes }}">{{ etat.anciennes }}</span>en ligne depuis 30 jours ou plus</div>
   <div class="carte"><span class="gros">{{ etat.reparues }}</span>annonces réapparues</div>
   <div class="carte"><span class="gros">{{ etat.jours_historises }}</span>jours d'historique</div>
+  <div class="carte"><span class="gros">{{ etat.ecartees }}</span>écartées du tri</div>
+</div>
+
+<div class="encadre discret">
+  <h2>Les deux périmètres</h2>
+  <p><b>Partie 1 — contrôle de gestion.</b> Missions courtes uniquement : intérim,
+     CDD et management de transition, dans toute la France. Les postes en CDI sont
+     écartés, sauf s'ils se décrivent eux-mêmes comme une mission.</p>
+  <p><b>Partie 2 — comptabilité et paie.</b> Malakoff et 10 kilomètres autour,
+     cabinet d'expertise comptable comme entreprise, tous types de contrat.</p>
+  <p><b>Écartées d'office.</b> Les cabinets de recrutement et les agences d'intérim,
+     qui sont des confrères et non des clients. Les annonces sans nom d'entreprise,
+     inexploitables en prospection. Et celles qui sortent des 10 kilomètres.
+     Elles restent consultables : choisissez « les annonces écartées » dans le filtre
+     ci-dessous pour les revoir et rattraper une erreur de tri.</p>
 </div>
 
 <div class="encadre discret">
@@ -46,8 +61,8 @@
     <label>Périmètre
       <select name="partie">
         <option value="">les deux parties</option>
-        <option value="1" {{ 'selected' if partie == 1 }}>partie 1 — contrôle de gestion, Île-de-France</option>
-        <option value="2" {{ 'selected' if partie == 2 }}>partie 2 — comptabilité et paie, Malakoff 10 km</option>
+        <option value="1" {{ 'selected' if partie == 1 }}>partie 1 — contrôle de gestion, missions courtes, France entière</option>
+        <option value="2" {{ 'selected' if partie == 2 }}>partie 2 — comptabilité et paie, Malakoff et 10 km</option>
       </select>
     </label>
     <label>Métier
@@ -66,6 +81,12 @@
         <option value="60" {{ 'selected' if anciennete == 60 }}>60 jours et plus</option>
       </select>
     </label>
+    <label>Afficher
+      <select name="ecartees">
+        <option value="0">les prospects retenus</option>
+        <option value="1" {{ 'selected' if ecartees }}>les annonces écartées</option>
+      </select>
+    </label>
     <label>Classer par
       <select name="tri">
         <option value="anciennete" {{ 'selected' if tri == 'anciennete' }}>ancienneté</option>
@@ -80,16 +101,17 @@
 
 <p>
   <a class="lien" href="/admin/pige/prospects.csv">Télécharger la liste (CSV)</a> —
-  <a class="lien" href="/admin/pige/entreprises">voir le classement des entreprises</a>
+  <a class="lien" href="/admin/pige/entreprises">voir le classement des entreprises</a> —
+  <a class="lien" href="/admin/pige/contacts">contacts de prospection</a>
 </p>
 
-<h2>{{ prospects|length }} prospect(s)</h2>
+<h2>{{ prospects|length }} {{ 'annonce(s) écartée(s)' if ecartees else 'prospect(s)' }}</h2>
 {% if prospects %}
 <table>
   <thead>
     <tr>
       <th>Entreprise</th><th>Poste</th><th>Lieu</th>
-      <th>Ancienneté</th><th>Signaux</th><th>Source</th><th></th>
+      <th>Ancienneté</th><th>Signaux</th>{% if ecartees %}<th>Motif</th>{% endif %}<th>Source</th><th></th>
     </tr>
   </thead>
   <tbody>
@@ -112,6 +134,7 @@
         {% if p.nb_reparutions %}<span class="etat expiree">{{ p.nb_reparutions }} réapparition(s)</span>{% endif %}
         {% if not p.en_ligne %}<span class="petit">retirée</span>{% endif %}
       </td>
+      {% if ecartees %}<td><span class="petit">{{ p.motif_ecart or '' }}</span></td>{% endif %}
       <td><span class="petit">{{ p.sources }}</span></td>
       <td>{% if p.url %}<a class="lien" href="{{ p.url }}" target="_blank" rel="noopener">voir</a>{% endif %}</td>
     </tr>

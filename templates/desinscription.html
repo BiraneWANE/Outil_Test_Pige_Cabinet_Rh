@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block titre %}Désinscription{% endblock %}
+{% block contenu %}
+{% if adresse %}
+<h1>C'est fait</h1>
+<div class="encadre">
+  <p>L'adresse <b>{{ adresse }}</b> ne recevra plus aucun message de notre part.</p>
+  <p>Votre opposition est enregistrée définitivement. Elle reste valable même si
+     votre entreprise publie de nouvelles offres d'emploi.</p>
+</div>
+<p class="petit">Vos coordonnées professionnelles provenaient d'une offre d'emploi
+   publiée sur France Travail. Elles n'étaient utilisées que pour une présentation
+   annuelle de nos services de recrutement.</p>
+{% else %}
+<h1>Lien inconnu</h1>
+<div class="encadre">
+  <p>Ce lien de désinscription ne correspond à aucune adresse enregistrée. Il a
+     peut-être déjà été utilisé, ou il a été tronqué par votre logiciel de
+     messagerie.</p>
+  <p>Répondez simplement au message reçu en demandant votre retrait : votre
+     opposition sera enregistrée à la main.</p>
+</div>
+{% endif %}
+{% endblock %}

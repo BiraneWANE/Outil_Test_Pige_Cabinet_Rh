@@ -84,17 +84,47 @@ Filtres par partie, métier et ancienneté. Export CSV de la liste filtrée.
 | | Partie 1 | Partie 2 |
 |---|---|---|
 | Métier | Contrôle de gestion | Comptabilité et paie |
-| Zone | Toute l'Île-de-France | Malakoff et 10 km |
+| Zone | Toute la France | Malakoff et 10 km |
+| Contrats | Missions courtes seulement | Tous |
 | ROME | M1204 | M1203, plus M1501 pour la paie |
 
-La zone de la partie 2 se change sans toucher au code, par deux variables
-d'environnement : `PIGE_COMMUNE` (code INSEE, 92046 par défaut) et
+**Partie 1, les missions courtes.** Le cabinet ne pige que de l'intérim, du CDD et
+du management de transition : les codes de contrat `CDD,MIS,DDI,TTI` sont demandés
+à France Travail, et le CDI est écarté. Une exception est prévue : un poste annoncé
+en CDI passe quand même si son intitulé se décrit comme une mission, ce qui est le
+cas du management de transition, souvent publié sans code de contrat adapté.
+
+**Partie 2, sans filtre de contrat.** Cabinet d'expertise comptable comme
+entreprise, CDI comme CDD. La zone se change sans toucher au code, par deux
+variables d'environnement : `PIGE_COMMUNE` (code INSEE, 92046 par défaut) et
 `PIGE_DISTANCE` (10 par défaut).
 
 Les métiers et les codes ROME sont en haut de `pige.py`, dans la liste
 `RECHERCHES`.
 
-## 7. Le point qui reste ouvert
+## 7. Ce qui est écarté du tri, et pourquoi
+
+Trois catégories d'annonces sont mises de côté à la collecte :
+
+**Les cabinets de recrutement et les agences d'intérim.** Ce sont des confrères,
+pas des clients : ils recrutent pour une entreprise dont ils taisent le nom, il
+n'y a donc personne à démarcher derrière l'annonce. Le tri se fait sur une liste
+d'enseignes connues et sur des mots révélateurs de la raison sociale
+(`ENSEIGNES_INTERMEDIAIRE` et `MOTS_INTERMEDIAIRE` en haut de `pige.py`).
+
+**Les annonces sans nom d'entreprise.** Inexploitables en prospection.
+
+**Les annonces hors des 10 kilomètres**, pour la partie 2. France Travail sait
+filtrer par commune et rayon, mais Adzuna ignore le rayon dès qu'il ne reconnaît
+pas la ville et renvoie la France entière. La vérification se fait donc côté
+plateforme, sur la liste `COMMUNES_PARTIE_2`.
+
+Rien n'est supprimé. Les annonces écartées restent en base avec leur motif et
+se consultent depuis la page, en choisissant « les annonces écartées » dans le
+filtre. Aucun tri automatique n'est parfait : si un vrai prospect s'y trouve,
+il suffit d'ajuster les listes en haut de `pige.py`.
+
+## 8. Le point qui reste ouvert
 
 Le code ROME du gestionnaire de paie n'est pas établi : selon les annonces il
 relève de M1203 (comptabilité) ou de M1501 (assistanat RH). Les deux sont donc
@@ -105,7 +135,27 @@ paie.
 rien, il suffira de le retirer de `RECHERCHES` pour diviser par deux le nombre
 d'appels.
 
-## 8. Données personnelles
+## 9. Les contacts de prospection
+
+Les offres France Travail portent parfois une adresse de contact. Elle est
+collectée, mais encadrée, parce qu'elle a été publiée pour recevoir des
+candidatures et non pour être démarchée.
+
+Page `/admin/pige/contacts`. Le fichier d'envoi ne contient par défaut que les
+adresses **génériques** (`contact@`, `recrutement@`, `rh@`), qui désignent une
+fonction et non une personne. Les nominatives sont comptées à part.
+
+Chaque adresse a son **lien de désinscription**, fourni dans l'export et à
+placer dans le courriel. La page `/desinscription/{jeton}` est publique, sans
+mot de passe : un clic suffit, et l'opposition tient même si l'entreprise
+republie une offre plus tard.
+
+La **mention d'information** à recopier dans le courriel est affichée sur la
+page. Elle n'est pas décorative : c'est elle qui rend l'envoi régulier.
+
+Le registre des traitements décrit ce second traitement en détail.
+
+## 10. Données personnelles des candidats
 
 Les annonces sont des données d'entreprise. Un seul cas limite : certaines
 mentionnent un contact nommé. Il est isolé dans la colonne `contact_nom`, jamais

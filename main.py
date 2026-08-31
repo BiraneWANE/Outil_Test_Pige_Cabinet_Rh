@@ -643,7 +643,7 @@ def telecharger_copie(sauvegarde_id: int, utilisateur: str = Depends(recruteur))
 
 @app.get("/admin/pige", response_class=HTMLResponse)
 def page_pige(request: Request, partie: int = None, metier: str = None,
-              anciennete: int = 0, tri: str = "anciennete",
+              anciennete: int = 0, tri: str = "anciennete", ecartees: int = 0,
               collectees: int = None, utilisateur: str = Depends(recruteur)):
     # Second declencheur de la collecte quotidienne, pour les journees
     # ou le serveur ne redemarre pas. Une erreur ici ne doit pas
@@ -657,12 +657,14 @@ def page_pige(request: Request, partie: int = None, metier: str = None,
         "request": request,
         "etat": pige.etat(),
         "prospects": pige.prospects(partie=partie, metier=metier,
-                                    anciennete_min=anciennete, tri=tri),
+                                    anciennete_min=anciennete, tri=tri,
+                                    ecartees=bool(ecartees)),
         "journal": pige.journal_collectes(),
         "partie": partie,
         "metier": metier,
         "anciennete": anciennete,
         "tri": tri,
+        "ecartees": bool(ecartees),
         "collecte": None,
     })
 
@@ -686,12 +688,14 @@ def lancer_collecte(utilisateur: str = Depends(recruteur)):
 
 @app.get("/admin/pige/prospects.csv")
 def prospects_csv(partie: int = None, metier: str = None, anciennete: int = 0,
-                  tri: str = "anciennete", utilisateur: str = Depends(recruteur)):
+                  tri: str = "anciennete", ecartees: int = 0,
+                  utilisateur: str = Depends(recruteur)):
     """La liste de prospects, pour la travailler hors de l'outil."""
     import csv
     import io
     lignes = pige.prospects(partie=partie, metier=metier,
-                            anciennete_min=anciennete, tri=tri, limite=5000)
+                            anciennete_min=anciennete, tri=tri, limite=5000,
+                            ecartees=bool(ecartees))
     tampon = io.StringIO()
     graveur = csv.writer(tampon, delimiter=";")
     graveur.writerow(["Entreprise", "Poste", "Commune", "Code postal", "Contrat",
@@ -711,6 +715,72 @@ def prospects_csv(partie: int = None, metier: str = None, anciennete: int = 0,
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="prospects.csv"'},
     )
+
+
+@app.get("/admin/pige/contacts", response_class=HTMLResponse)
+def page_contacts(request: Request, nominatives: int = 0, desinscrits: int = 0,
+                  desinscrit: str = None, utilisateur: str = Depends(recruteur)):
+    return templates.TemplateResponse(request, "pige_contacts.html", {
+        "request": request,
+        "etat": pige.etat_contacts(),
+        "contacts": pige.contacts(generiques_seulement=not nominatives,
+                                  desinscrits=bool(desinscrits)),
+        "mention": pige.MENTION_OBLIGATOIRE,
+        "url_publique": URL_PUBLIQUE,
+        "nominatives": bool(nominatives),
+        "desinscrits": bool(desinscrits),
+        "desinscrit": desinscrit,
+    })
+
+
+@app.post("/admin/pige/contacts/desinscrire")
+def desinscrire_contact(courriel: str = Form(...),
+                        utilisateur: str = Depends(recruteur)):
+    """Opposition recue par un autre canal : un appel, une reponse au
+    courriel. Elle doit etre enregistree tout de suite."""
+    fait = pige.desinscrire(courriel=courriel)
+    return RedirectResponse(
+        f"/admin/pige/contacts?desinscrit={quote(fait or 'introuvable')}",
+        status_code=303)
+
+
+@app.get("/admin/pige/contacts.csv")
+def contacts_csv(nominatives: int = 0, utilisateur: str = Depends(recruteur)):
+    """Le fichier d'envoi. Les desinscrits n'y figurent jamais."""
+    import csv
+    import io
+    lignes = pige.contacts(generiques_seulement=not nominatives, limite=5000)
+    tampon = io.StringIO()
+    graveur = csv.writer(tampon, delimiter=";")
+    graveur.writerow(["Courriel", "Type", "Entreprise", "Commune",
+                      "Origine", "Collecte le", "Lien de desinscription"])
+    for c in lignes:
+        graveur.writerow([
+            c["courriel"], "generique" if c["generique"] else "nominative",
+            c["entreprise"] or "", c["commune"] or "", c["origine"],
+            c["collecte_le"].strftime("%d/%m/%Y"),
+            f"{URL_PUBLIQUE}/desinscription/{c['jeton']}",
+        ])
+    return Response(
+        content=tampon.getvalue().encode("utf-8-sig"),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="contacts.csv"'},
+    )
+
+
+# ------------------------------------------------------------------
+# Desinscription : page publique, sans mot de passe
+# Le lien figure dans chaque courriel. Sans elle, l'opposition n'est
+# pas effective et le traitement ne tient pas.
+# ------------------------------------------------------------------
+
+@app.get("/desinscription/{jeton}", response_class=HTMLResponse)
+def page_desinscription(request: Request, jeton: str):
+    adresse = pige.desinscrire(jeton=jeton)
+    return templates.TemplateResponse(request, "desinscription.html", {
+        "request": request,
+        "adresse": adresse,
+    })
 
 
 @app.get("/sante")

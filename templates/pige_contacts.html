@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block titre %}Contacts de prospection{% endblock %}
+{% block contenu %}
+<h1>Contacts de prospection</h1>
+<p class="chapeau">Les adresses publiées avec les offres d'emploi retenues.
+<a class="lien" href="/admin/pige">Retour à la pige</a></p>
+
+{% if desinscrit %}
+<div class="encadre">
+  <p>{{ desinscrit }} : opposition enregistrée.</p>
+</div>
+{% endif %}
+
+<div class="cartes">
+  <div class="carte"><span class="gros">{{ etat.envoyables }}</span>adresses envoyables</div>
+  <div class="carte"><span class="gros">{{ etat.generiques }}</span>génériques</div>
+  <div class="carte"><span class="gros">{{ etat.nominatives }}</span>nominatives</div>
+  <div class="carte"><span class="gros {{ 'alerte-texte' if etat.desinscrits }}">{{ etat.desinscrits }}</span>désinscrits</div>
+</div>
+
+<div class="encadre alerte">
+  <h2>À lire avant le premier envoi</h2>
+  <p>Ces adresses ont été publiées par les employeurs <b>pour recevoir des
+     candidatures</b>. Les utiliser pour présenter vos services est un autre usage,
+     admis en prospection professionnelle à trois conditions, toutes réunies ici :</p>
+  <p><b>1. Une adresse de fonction, pas de personne.</b> La liste ne retient par
+     défaut que les adresses génériques du type <code>contact@</code>,
+     <code>recrutement@</code> ou <code>rh@</code>, qui ne désignent personne. Les
+     adresses nominatives sont comptées à part et ne sortent pas dans le fichier
+     sauf demande expresse.</p>
+  <p><b>2. Dire d'où vient l'adresse, dès le premier message.</b> Le texte ci-dessous
+     est à recopier dans le courriel. Ce n'est pas une formule de politesse : c'est
+     l'obligation d'information, et c'est elle qui manque dans les dossiers
+     sanctionnés.</p>
+  <p><b>3. Un lien de désinscription qui fonctionne.</b> Chaque adresse a le sien
+     dans l'export. Un clic suffit, l'opposition est définitive, et elle tient même
+     si l'entreprise republie une offre plus tard.</p>
+</div>
+
+<div class="encadre">
+  <h2>Mention à recopier dans le courriel</h2>
+  <p class="petit" style="white-space: pre-wrap">{{ mention }}</p>
+  <p class="petit">Suivie du lien de désinscription propre à chaque destinataire,
+     fourni dans la colonne dédiée de l'export.</p>
+</div>
+
+<p>
+  <a class="lien" href="/admin/pige/contacts.csv"><b>Télécharger le fichier d'envoi (CSV)</b></a> —
+  {% if nominatives %}
+    <a class="lien" href="/admin/pige/contacts">n'afficher que les génériques</a>
+  {% else %}
+    <a class="lien" href="/admin/pige/contacts?nominatives=1">afficher aussi les nominatives</a>
+  {% endif %} —
+  {% if desinscrits %}
+    <a class="lien" href="/admin/pige/contacts">revenir aux adresses actives</a>
+  {% else %}
+    <a class="lien" href="/admin/pige/contacts?desinscrits=1">voir les désinscrits</a>
+  {% endif %}
+</p>
+
+<h2>{{ contacts|length }} adresse(s)</h2>
+{% if contacts %}
+<table>
+  <thead>
+    <tr><th>Adresse</th><th>Type</th><th>Entreprise</th><th>Commune</th><th>Collectée le</th></tr>
+  </thead>
+  <tbody>
+  {% for c in contacts %}
+    <tr>
+      <td>{{ c.courriel }}</td>
+      <td>
+        {% if c.generique %}<span class="etat terminee">fonction</span>
+        {% else %}<span class="etat expiree">personne</span>{% endif %}
+      </td>
+      <td>{{ c.entreprise or '—' }}</td>
+      <td>{{ c.commune or '—' }}</td>
+      <td class="petit">{{ c.collecte_le.strftime('%d/%m/%Y') }}
+        {% if c.desinscrit_le %}<br>désinscrit le {{ c.desinscrit_le|heure }}{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="petit">Aucune adresse pour ces critères. Les offres ne portent pas toutes
+   un contact : beaucoup d'employeurs ne font postuler que par le site.</p>
+{% endif %}
+
+<div class="encadre">
+  <h2>Enregistrer une opposition reçue autrement</h2>
+  <p>Si quelqu'un demande son retrait par téléphone ou en répondant au courriel,
+     saisissez son adresse ici. Elle sera écartée définitivement de tous les envois.</p>
+  <form method="post" action="/admin/pige/contacts/desinscrire" class="grille">
+    <label>Adresse <input type="email" name="courriel" required></label>
+    <button type="submit">Enregistrer l'opposition</button>
+  </form>
+</div>
+{% endblock %}
