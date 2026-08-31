@@ -12,6 +12,15 @@ mot de passe vous a été transmis séparément et ne doit pas circuler par cour
 L'application est disponible en permanence, pour vous comme pour les candidats.
 Les pages s'ouvrent en quelques secondes, à toute heure.
 
+Elle fait deux choses, séparées dans le menu :
+
+- **les tests** — inviter un candidat, lire son résultat, le transmettre ;
+- **la pige des annonces** — la liste des entreprises qui recrutent, mise à
+  jour toute seule chaque matin.
+
+La première moitié de ce guide traite des tests. La pige et les sauvegardes
+sont traitées plus bas, chacune dans sa section.
+
 ---
 
 ## Faire passer un test à un candidat
@@ -224,6 +233,87 @@ doute, ne supprimez pas : les données partent d'elles-mêmes au bout de six moi
 
 ---
 
+## Les sauvegardes
+
+Une copie complète est enregistrée toute seule chaque jour. Vous n'avez rien à
+lancer. Le lien **sauvegardes** du back-office ouvre la page qui les liste.
+
+**Ce que vous avez à faire : télécharger une archive de temps en temps.**
+
+Pourquoi, alors que les copies se font seules ? Parce que ces copies vivent au
+même endroit que les données qu'elles protègent. Elles rattrapent une fausse
+manœuvre — une passation supprimée par erreur, par exemple — mais si
+l'hébergeur de la base disparaissait, elles disparaîtraient avec lui.
+
+L'archive que vous téléchargez est la seule qui sorte des serveurs. C'est la
+seule qui protège vraiment.
+
+Un bandeau vous le rappelle au bout de sept jours sans téléchargement. Une fois
+par semaine suffit largement. Rangez le fichier là où vous rangeriez un
+document important, pas dans les téléchargements.
+
+Le fichier s'ouvre comme un dossier compressé ordinaire. À l'intérieur, les
+données sont lisibles dans Excel, et un mode d'emploi explique comment tout
+remonter — vous n'aurez pas à le faire vous-même, mais il est là.
+
+---
+
+## La pige des annonces
+
+Le lien **pige des annonces** ouvre la seconde moitié de l'outil. Elle ne
+concerne pas les candidats mais les entreprises qui recrutent.
+
+Chaque matin, l'application relève les offres d'emploi publiées sur deux
+sources, écarte ce qui ne vous intéresse pas, et vous présente ce qui reste.
+Vous n'avez rien à lancer : la liste du jour est là quand vous arrivez.
+
+**Ce que la page vous montre.**
+
+*L'ancienneté*, en jours depuis la publication de l'annonce. C'est le signal le
+plus utile : une annonce qui traîne depuis six semaines, c'est un recrutement
+qui ne se fait pas.
+
+*Les réapparitions*, c'est-à-dire les annonces disparues puis republiées.
+Signal plus fort encore.
+
+*Les entreprises les plus actives*, avec leur nombre de postes ouverts. Les
+raisons sociales sont regroupées : « KPMG », « KPMG France » et
+« Cabinet KPMG » ne comptent que pour une.
+
+Les filtres en haut de page vous permettent de restreindre à une partie, à un
+métier ou à une ancienneté. Le bouton d'export produit un CSV de la liste
+telle que vous l'avez filtrée.
+
+**Ce qui a été écarté, et comment le rattraper.**
+
+L'outil met de côté les cabinets de recrutement et les agences d'intérim — ce
+sont des confrères, et ils taisent le nom de leur client —, le secteur public,
+qui passe par marché public, les annonces sans nom d'entreprise, et celles qui
+datent de plus de quatre mois.
+
+**Rien n'est supprimé.** Choisissez « les annonces écartées » dans le filtre et
+vous verrez tout, avec le motif de chaque mise à l'écart. Si vous y trouvez un
+vrai prospect, dites-le : la liste des exclusions se corrige.
+
+**Les contacts.**
+
+Certaines annonces publient une adresse de contact. La page
+**contacts** les rassemble. Par défaut, le fichier d'envoi ne contient que les
+adresses génériques — `contact@`, `recrutement@`, `rh@` — qui désignent une
+fonction et non une personne.
+
+Trois règles à respecter, elles ne sont pas négociables :
+
+1. La **mention d'information** affichée sur la page doit figurer dans le
+   courriel. C'est elle qui rend l'envoi régulier : elle dit d'où vient
+   l'adresse et pourquoi vous écrivez.
+2. Le **lien de désinscription** de chaque adresse, fourni dans l'export, doit
+   être dans le message. Un clic suffit au destinataire.
+3. Une désinscription vaut **pour toujours**, même si l'entreprise republie une
+   offre plus tard. L'outil s'en souvient tout seul, ne le contournez pas.
+
+---
+
 ## En cas de problème
 
 **Un candidat dit que son lien ne fonctionne pas.** Vérifiez le statut. S'il est
@@ -315,8 +405,12 @@ un test en entier : vous verrez exactement ce que voit un candidat.
 5. Téléchargez le **PDF** : c'est ce que recevra le client.
 6. Ouvrez **données personnelles** et lisez les quatre compteurs.
 7. Supprimez votre passation d'essai avec le bouton **supprimer**.
+8. Ouvrez **sauvegardes** et téléchargez une archive, pour voir à quoi elle
+   ressemble.
+9. Ouvrez **pige des annonces**, triez par ancienneté, et regardez les cinq
+   premières lignes.
 
-Si ces sept gestes vous sont familiers, vous savez tout faire.
+Si ces neuf gestes vous sont familiers, vous savez tout faire.
 
 ---
 
@@ -328,3 +422,8 @@ Si ces sept gestes vous sont familiers, vous savez tout faire.
   qu'elle reste désactivée ?
 - Le registre des traitements attend votre raison sociale et une adresse de
   contact pour les candidats.
+- La pige remonte aujourd'hui les annonces de moins de quatre mois : est-ce le
+  bon horizon ?
+- Le périmètre de la partie 2 est fixé à Malakoff et dix kilomètres autour.
+  Faut-il l'élargir ?
+- Quel jour de la semaine voulez-vous prendre pour télécharger la sauvegarde ?

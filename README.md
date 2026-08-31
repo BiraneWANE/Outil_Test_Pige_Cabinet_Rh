@@ -1,281 +1,316 @@
-# Plateforme de tests candidats
+# Tests candidats et pige des annonces
 
-Application web permettant d'envoyer à un candidat un lien unique vers un test
-chronométré, puis de consulter le résultat corrigé automatiquement.
+Deux outils pour un cabinet de recrutement spécialisé en finance et en paie,
+écrits pendant un stage de reconversion vers la donnée.
+
+Le premier fait passer des tests à des candidats. Le second surveille les
+offres d'emploi publiées et en tire une liste d'entreprises à démarcher.
+
+Ils partagent le même programme, la même base de données et le même
+hébergement. C'est un choix, expliqué plus bas.
+
+**Application en service** — <https://tests-candidats.onrender.com>
+Tout est en Python. Aucune autre technologie n'est nécessaire.
+
+---
+
+## Le problème de départ
+
+Une consultante en recrutement recevait des candidatures en comptabilité et en
+paie, et n'avait aucun moyen simple de vérifier les compétences annoncées
+avant l'entretien. Elle faisait passer des tests sur papier, les corrigeait à
+la main, et ne pouvait pas savoir si ses questions étaient bonnes.
+
+En parallèle, elle repérait ses prospects en ouvrant chaque matin les sites
+d'offres d'emploi. Une entreprise qui recrute un comptable est une entreprise
+qui a un besoin — et une annonce qui traîne depuis six semaines est une
+entreprise qui n'y arrive pas. C'est exactement le genre de signal qu'on ne
+voit pas en regardant une liste une fois par jour, mais qu'on voit très bien
+en gardant la trace de ce qu'on a vu hier.
+
+Deux besoins différents, une même réponse : un programme qui tourne tout seul.
+
+---
+
+## Ce que ça fait
+
+### Partie 1 — les tests candidats
+
+La consultante crée une invitation depuis son back-office. Le programme
+fabrique un lien unique, valable quelques jours, qu'elle envoie au candidat.
+Celui-ci n'a ni compte ni mot de passe : le lien *est* son identification.
+
+Il répond en vingt minutes, une question par page. Le chronomètre tourne côté
+serveur, pas dans son navigateur — recharger la page ou changer de téléphone
+ne rend pas une minute. Chaque case cochée part immédiatement en base, donc
+une coupure de réseau ne coûte que la question en cours.
+
+À la remise, la copie est corrigée toute seule et le candidat ne voit jamais
+son résultat. La consultante, elle, reçoit le détail question par question,
+un PDF à transmettre à son client, et si elle le demande un guide d'entretien.
 
 Huit tests sont fournis : test technique et questionnaire de positionnement,
-en comptabilité et en paie, niveaux junior et confirmé.
+en comptabilité et en paie, niveaux junior et confirmé. Soit 162 questions et
+534 réponses possibles.
 
-Tout le code est en Python. Aucune autre technologie n'est nécessaire.
+![Architecture de l'outil de tests](docs/architecture/1-tests-candidats.png)
+
+### Partie 2 — la pige des annonces
+
+Chaque matin, le programme interroge deux sources d'offres d'emploi —
+l'API de France Travail et celle d'Adzuna — puis fait quatre choses.
+
+Il **dédoublonne** : deux annonces qui portent la même entreprise, le même
+intitulé et la même commune sont la même offre, quelle que soit la source.
+
+Il **trie** : les cabinets de recrutement et les agences d'intérim sont des
+confrères, pas des clients ; le secteur public passe par marché public ; une
+annonce sans nom d'entreprise est inexploitable. Rien n'est supprimé pour
+autant — une annonce écartée reste consultable avec son motif, parce qu'aucun
+tri automatique n'est juste à tous les coups.
+
+Il **historise** : une ligne par annonce et par jour. C'est le cœur de la
+pige. Prise isolément, une collecte n'est qu'une photographie ; accumulées,
+elles disent qu'une annonce dure depuis six semaines, ou qu'elle a disparu
+puis reparu.
+
+Il **signale** : les annonces les plus anciennes, les réapparitions, et les
+entreprises qui ont le plus de postes ouverts.
+
+Sur la première collecte complète, 2 066 annonces brutes ont donné
+536 prospects exploitables.
+
+![Architecture de l'outil de pige](docs/architecture/2-pige-annonces.png)
 
 ---
 
-## 1. Ce dont vous avez besoin
+## L'essayer en dix minutes
 
-- Python 3.11 ou plus récent
-- Une base PostgreSQL. Le plus simple est un service hébergé : Neon ou Supabase
-  proposent une offre gratuite suffisante. **Choisissez une région européenne**,
-  les réponses des candidats sont des données personnelles.
-
-## 2. Installation
+Il faut Python 3.12 et une base PostgreSQL. Le plus simple est un service
+hébergé — [Neon](https://neon.tech) a une offre gratuite suffisante.
+**Choisissez une région européenne** : les réponses des candidats sont des
+données personnelles.
 
 ```bash
+git clone https://github.com/BiraneWANE/Outil_Test_Pige_Cabinet_Rh.git
+cd Outil_Test_Pige_Cabinet_Rh
 pip install -r requirements.txt
+
+cp .env.exemple .env      # puis remplissez DATABASE_URL et MOT_DE_PASSE_RECRUTEUR
+python installer.py       # crée les 16 tables et charge les 8 tests
+uvicorn main:app --reload
 ```
 
-Définissez les variables d'environnement :
+Puis <http://127.0.0.1:8000/admin>. L'identifiant est libre, le mot de passe
+est celui du `.env`.
 
-```bash
-export DATABASE_URL="postgresql://utilisateur:motdepasse@hote/base?sslmode=require"
-export MOT_DE_PASSE_RECRUTEUR="un-mot-de-passe-long-et-unique"
-export URL_PUBLIQUE="https://tests.votre-cabinet.fr"
-export JOURS_VALIDITE=7           # durée de vie d'un lien d'invitation
-export JOURS_CONSERVATION=180     # avant purge des données du candidat
-```
+`installer.py` est sans danger : relancez-le autant de fois que vous voulez,
+il ne détruit rien.
 
-Créez les tables puis chargez les questions :
-
-```bash
-psql "$DATABASE_URL" -f schema.sql
-psql "$DATABASE_URL" -f schema_analyse.sql
-python charger_banque.py
-```
-
-## 3. Lancement
-
-```bash
-uvicorn main:app --host 0.0.0.0 --port 8000
-```
-
-- Back-office recruteur : `/admin` (identifiant libre, mot de passe ci-dessus)
-- Lien candidat : généré depuis le back-office, de la forme `/t/{token}`
-
-## 4. Utilisation au quotidien
-
-1. Ouvrez `/admin`.
-2. Choisissez le test, saisissez le nom du candidat, générez le lien.
-3. Copiez le lien affiché dans la colonne de droite et envoyez-le au candidat.
-4. Le résultat apparaît dans le tableau dès que le candidat a validé.
-
-Un lien correspond à un candidat et à un test. Pour faire passer les deux tests
-à la même personne, générez deux liens.
-
-## 5. Points de fonctionnement à connaître
-
-**Le chronomètre est calculé par le serveur.** L'heure de démarrage est
-enregistrée en base au premier clic sur « Démarrer ». Recharger la page, fermer
-le navigateur ou modifier le compte à rebours affiché ne prolonge pas le test.
-Le temps continue de s'écouler même si le candidat s'interrompt.
-
-**Les réponses sont enregistrées question par question.** Si la connexion est
-perdue, le candidat revient sur son lien et reprend où il en était.
-
-**Un test validé ne peut plus être rouvert.** Le lien devient inutilisable.
-
-**Le token fait 22 caractères tirés aléatoirement.** Il n'est pas devinable, mais
-il n'est pas secret pour autant : toute personne disposant du lien peut passer le
-test. Ne le publiez pas et ne le mettez pas en copie d'un message collectif.
-
-## 6. Correction
-
-*Tests techniques.* Une question est validée uniquement si toutes les bonnes
-réponses sont cochées et qu'aucune réponse erronée ne l'est. Pas de point négatif,
-pas de point partiel.
-
-*Questionnaires de positionnement.* Aucune note. La partie 1 produit un profil
-sur sept dimensions, dont les totaux s'additionnent toujours à 21 : le profil est
-**relatif à chaque candidat** et ne permet pas de comparer deux candidats entre
-eux. La partie 2 relève les choix faits en situation et signale les points de
-vigilance.
-
-Ces questionnaires ne sont pas des tests psychométriques validés. Ils préparent
-l'entretien et ne doivent jamais servir seuls à écarter une candidature.
-
-## 7. Données personnelles
-
-- Le candidat est informé avant de démarrer et doit cocher une case.
-- La colonne `purge_apres` fixe la date de suppression, calculée à la création.
-- La table `journal` conserve la trace des événements (ouverture, démarrage,
-  soumission, expiration).
-
-Purge à programmer une fois par jour :
-
-```sql
-UPDATE invitation
-   SET candidat_nom = NULL, candidat_email = NULL, token = 'purge_' || id
- WHERE purge_apres < CURRENT_DATE;
-```
-
-Les résultats sont conservés sans identité, ce qui permet de garder des
-statistiques sans conserver de données personnelles.
-
-## 8. Modifier une question
-
-Le fichier `banque_questions.json` est la source unique : c'est lui qui alimente
-la base. Modifiez-le, puis relancez :
-
-```bash
-python charger_banque.py
-```
-
-Le script remplace proprement les tests concernés. Les invitations déjà passées
-conservent leurs résultats.
-
-## 9. Vérifier que tout fonctionne
-
-```bash
-python test_correction.py
-```
-
-Ce script contrôle la logique de correction sur la banque réelle : règle du tout
-ou rien, équilibre des sept dimensions, comptage des points de vigilance.
+La pige a besoin de deux clés d'API supplémentaires, gratuites et obtenues en
+un quart d'heure. Sans elles, la page s'ouvre et affiche un bandeau, le reste
+fonctionne. Voir [docs/FONCTIONNEMENT_PIGE.md](docs/FONCTIONNEMENT_PIGE.md).
 
 ---
 
-## 10. Couche analytique
+## Le mettre en ligne
 
-L'application ne se contente pas de corriger : elle mesure la qualité de ses
-propres questions à partir des passations réelles.
+L'application tourne sur [Render](https://render.com), plan Starter, région
+Francfort. La base est chez Neon, région Francfort également.
 
-### Ce qui est collecté
+Le déploiement est continu : un `git push` sur `main` déclenche une nouvelle
+mise en ligne, en deux ou trois minutes. Aucune commande à lancer, aucun
+serveur à administrer.
 
-La table `vue_question` enregistre, pour chaque candidat et chaque question, le
-temps passé et le nombre de retours. Sans cette donnée, aucune analyse d'items
-n'est possible : c'est elle qui distingue une question difficile d'une question
-survolée.
+Les mots de passe et les clés ne sont **jamais** dans le dépôt. Ils vivent
+dans le `.env` en local — que `.gitignore` exclut — et dans les variables
+d'environnement de l'hébergeur en ligne.
 
-### Analyse d'items — `/admin/analyse/{test_id}`
+![La chaîne de fabrication](docs/architecture/3-fabrication.png)
 
-Pour chaque question, trois indicateurs :
+---
 
-- **Taux de réussite** (`p`) : part des candidats qui valident la question.
-  Signalée au-dessus de 95 % (n'apporte aucune information) et en dessous de
-  20 % (trop difficile, ou corrigé erroné).
-- **Corrélation item-total** (`r`) : corrélation entre la réussite à cette
-  question et le score global. En dessous de 0,10, la question ne sépare pas les
-  candidats solides des autres — c'est la signature d'un énoncé ambigu.
-- **Temps médian** : une médiane de trois secondes ou moins signale une question
-  systématiquement expédiée.
+## Ce que j'ai décidé, et pourquoi
 
-Le seuil de fiabilité est fixé à trente passations. En dessous, l'interface
-affiche un avertissement explicite.
+Ce sont les six choix qui expliquent tout le reste du code.
 
-### Questionnaires de positionnement
+**Le chronomètre appartient au serveur.** Confié au navigateur, il serait
+modifiable en quelques clics par n'importe qui sachant ouvrir les outils de
+développement. L'heure de départ est écrite en base au premier clic, et rien
+de ce que fait le candidat ensuite ne la change.
 
-- **Profil agrégé** : moyenne et médiane de chaque dimension sur l'ensemble des
-  candidats. C'est le seul moyen de situer un candidat par rapport aux autres,
-  puisque son profil individuel est relatif.
-- **Répartition des situations** : part de chaque option choisie et part de
-  candidats ayant retenu un point de vigilance. Une option jamais choisie est un
-  distracteur inutile, signalé comme tel.
+**Rien n'attend la fin du test.** Enregistrer à la remise, c'est tout perdre
+en cas de coupure. En écrivant chaque réponse aussitôt, l'incident ne coûte
+qu'une question.
 
-### Signalements individuels
+**Une seule porte vers les données.** Aucun fichier ne parle à la base sauf
+`db.py`. C'est une contrainte que je me suis imposée au premier jour, et c'est
+elle qui a rendu la pige possible en un fichier : `pige.py` a réutilisé la
+même porte, sans rien changer à ce qui existait.
 
-Calculés à la validation et stockés dans `anomalie` :
+**Effacer n'est pas supprimer.** À 180 jours, l'identité du candidat
+disparaît mais ses réponses restent. Elles ne désignent plus personne et
+servent à repérer les questions mal formulées. La suppression totale reste
+possible à tout moment sur demande.
 
-| Code | Détection |
+**Écarter n'est pas jeter.** Une annonce mise de côté par la pige reste en
+base avec son motif. Si un vrai prospect s'y trouve, il est rattrapable — ce
+qui n'aurait pas été le cas s'il avait été supprimé.
+
+**Deux sources d'annonces plutôt qu'une.** Elles ne se recouvrent presque
+pas : 63 % des prospects venaient d'Adzuna seul, 37 % de France Travail seul,
+moins de 1 % des deux. Se contenter de l'une aurait fait perdre un tiers du
+gisement.
+
+---
+
+## Mesurer la qualité des questions
+
+L'application ne se contente pas de corriger : elle mesure ses propres
+questions à partir des passations réelles.
+
+Pour chaque question, trois indicateurs — le taux de réussite, la corrélation
+entre la réussite à cette question et le score global, et le temps médian.
+Une question réussie par 98 % des candidats n'apporte aucune information. Une
+question dont la corrélation est proche de zéro ne sépare pas les candidats
+solides des autres : c'est la signature d'un énoncé ambigu. Une médiane de
+trois secondes signale une question systématiquement expédiée.
+
+Le seuil de fiabilité est fixé à trente passations. En dessous, l'interface le
+dit franchement plutôt que d'afficher des chiffres qui ne veulent rien dire.
+
+Le détail complet — signalements individuels, profils agrégés, export CSV —
+est dans [docs/ANALYSE_DES_QUESTIONS.md](docs/ANALYSE_DES_QUESTIONS.md).
+
+---
+
+## Le guide d'entretien, et la ligne rouge
+
+Une fonction facultative transforme un profil de positionnement en questions à
+poser en entretien. Elle appelle un modèle de langage, et c'est le seul moment
+où une donnée sort de l'Union européenne.
+
+Le point important est ce qu'elle ne fait pas. Le modèle **ne produit aucune
+évaluation du candidat** : il ne dit pas si le profil convient, ne recommande
+rien, ne compare personne. Il reformule un profil déjà calculé en guide de
+préparation.
+
+Ce n'est pas un scrupule décoratif. Une évaluation automatisée de personne en
+recrutement relève du RGPD sur les décisions automatisées et du règlement
+européen sur l'IA, qui classe cet usage à haut risque. Un outil qui propose
+des questions ne tombe pas dans ce champ — à condition de s'y tenir, et de
+pouvoir le prouver.
+
+Quatre garde-fous le garantissent : aucune donnée nominative n'est transmise,
+le modèle reçoit l'interdiction explicite de juger, le texte produit est
+vérifié avant enregistrement contre une liste de formulations interdites, et
+le déclenchement est toujours manuel.
+
+Sans clé d'API, la fonction est invisible et l'application fonctionne
+normalement. Détail dans
+[docs/GUIDE_ENTRETIEN_IA.md](docs/GUIDE_ENTRETIEN_IA.md).
+
+---
+
+## Les données personnelles
+
+Le candidat est informé avant de démarrer et doit cocher une case. Son
+acceptation est datée à la seconde.
+
+Les identités sont effacées automatiquement au bout de 180 jours, par un
+traitement qui tourne chaque jour sans que personne ait rien à lancer. Une
+demande d'effacement anticipée se traite en un clic depuis le back-office.
+
+Les annonces de la pige, elles, sont des données d'entreprise. Le seul cas
+limite est l'adresse de contact publiée dans une offre : elle est encadrée,
+chaque adresse porte son lien de désinscription, et une opposition vaut pour
+toujours.
+
+Le registre des traitements décrit les deux traitements en détail :
+[docs/REGISTRE_TRAITEMENTS.md](docs/REGISTRE_TRAITEMENTS.md).
+
+---
+
+## Ne pas perdre la base
+
+Une copie complète de la base est fabriquée chaque jour et conservée trente
+jours. Elle rattrape une fausse manœuvre.
+
+Mais une copie qui vit dans la base ne protège pas de la disparition de
+l'hébergeur : elle disparaîtrait avec lui. C'est pourquoi le back-office
+propose une archive à télécharger, et affiche un rappel au bout de sept jours
+sans téléchargement.
+
+L'archive est autonome : elle contient les données en JSON et en CSV, le
+schéma SQL, et le script `restaurer.py` qui remet le tout dans une base vide.
+Elle a été testée pour de vrai — dix tables restaurées à l'identique.
+
+Détail dans
+[docs/FONCTIONNEMENT_SAUVEGARDE.md](docs/FONCTIONNEMENT_SAUVEGARDE.md).
+
+---
+
+## Les fichiers
+
+| Fichier | Ce qu'il fait |
 |---|---|
-| `passation_rapide` | Moins de 30 % du temps imparti |
-| `reponses_eclair` | Un quart des questions traitées en 3 secondes ou moins |
-| `reponse_monotone` | 80 % des réponses sur la même position |
-| `profil_plat` | Écart de 1 point ou moins entre la dimension haute et basse |
-| `incomplet` | Un cinquième des questions sans réponse |
-| `temps_epuise` | Le temps imparti a été entièrement consommé |
+| `main.py` | Les pages et les adresses. Il appelle, il ne calcule pas |
+| `db.py` | La seule porte vers la base |
+| `correction.py` | Calcule la note et le profil |
+| `analyse.py` | Juge les questions, repère les signalements |
+| `rapport_pdf.py` | Fabrique le PDF de résultat |
+| `pige.py` | Collecte, dédoublonne, trie, historise les annonces |
+| `sauvegarde.py` | Construit les archives |
+| `restaurer.py` | Remet une archive dans une base vide |
+| `rgpd.py` | Efface les identités arrivées à échéance |
+| `ia.py` | Le guide d'entretien, avec ses garde-fous |
+| `affichage.py` | L'heure de Paris — le serveur tourne en UTC |
+| `installer.py` | Crée les tables et charge les questions |
+| `charger_banque.py` | Recharge la banque de questions seule |
+| `bilan_pige.py` | Un état des lieux de la pige, en lecture seule |
 
-Ces signalements alimentent l'entretien. Ils ne sont jamais disqualifiants et
-l'interface le rappelle au recruteur.
+Les quatre fichiers `schema*.sql` décrivent les 16 tables et les 2 vues. Les
+gabarits de pages sont dans `templates/`, la feuille de style dans `static/`.
 
-### Export — `/admin/export.csv`
-
-Une ligne par question et par passation, sans aucune donnée nominative :
-identifiant de passation, test, numéro de question, temps passé, réussite, score
-global, durée totale, jour. Exploitable directement dans pandas.
-
-### Ce qui deviendra possible avec du volume
-
-À partir d'une cinquantaine de recrutements suivis dans le temps, les données
-collectées permettent de croiser le score obtenu avec la réussite en poste, et
-donc de savoir si le test prédit réellement quelque chose. Tant que ce recul
-n'existe pas, aucun modèle prédictif ne serait honnête : le schéma est conçu pour
-l'accueillir, pas pour le simuler.
-
-### Vérification
-
-```bash
-python test_correction.py   # logique de correction
-python test_analyse.py      # analyse d'items et signalements
-```
-
-Le second simule soixante passations dont deux questions volontairement
-défectueuses, et vérifie que l'analyse les repère sans signaler les questions
-saines.
+`banque_questions.json` est la source unique des questions : on le modifie, on
+relance `charger_banque.py`, et les tests sont à jour. Les passations déjà
+faites gardent leurs résultats.
 
 ---
 
-## 11. Guide d'entretien genere automatiquement
-
-Fonction facultative, desactivee par defaut. Elle transforme un profil de
-positionnement en questions a poser en entretien.
-
-### Ce que la fonction fait et ne fait pas
-
-Le modele **ne produit aucune evaluation du candidat**. Il ne dit pas si le profil
-convient, ne recommande rien, ne compare personne. Il reformule un profil deja
-calcule en guide de preparation. La decision reste entierement au recruteur.
-
-Ce cadrage n'est pas cosmetique. Une evaluation automatisee de personne en
-recrutement releve du RGPD sur les decisions automatisees et du reglement europeen
-sur l'IA, qui classe cet usage a haut risque. Un outil qui se contente de proposer
-des questions ne tombe pas dans ce champ.
-
-### Garde-fous techniques
-
-1. **Aucune donnee nominative transmise.** Seuls le profil chiffre, les choix en
-   situation, le poste vise et le niveau partent chez le fournisseur. Ni nom, ni
-   adresse, ni identifiant.
-2. **Consigne contraignante.** Le modele recoit l'interdiction explicite de porter
-   un jugement, de noter, de classer ou de recommander.
-3. **Controle de la sortie.** Avant enregistrement, le texte est verifie contre une
-   liste de formulations interdites (recommandation d'embauche, profil a ecarter,
-   note globale, comparaison entre candidats). En cas de detection, la generation
-   est rejetee et rien n'est enregistre.
-4. **Declenchement manuel.** Le guide n'est jamais produit automatiquement : le
-   recruteur clique.
-5. **Tracabilite.** Le modele utilise, l'auteur de la demande et la date sont
-   conserves dans `guide_entretien`, et l'evenement est journalise.
-
-### Configuration
-
-Dans le fichier `.env` :
-
-```
-IA_FOURNISSEUR=anthropic     # ou openai
-IA_CLE_API=votre_cle
-IA_MODELE=claude-haiku-4-5-20251001
-```
-
-Sans cle, la fonction reste invisible et l'application fonctionne normalement.
-
-### Cout
-
-Chaque generation envoie environ 1 500 tokens et en recoit 900, soit moins d'un
-centime avec Haiku 4.5 et environ un centime avec Sonnet 5.
-
-Seuls les questionnaires de positionnement declenchent une generation : les tests
-techniques sont corriges par le code, sans appel a l'IA. Un cabinet qui fait passer
-six entretiens par mois consomme donc de l'ordre de dix centimes mensuels.
-
-Les credits prepayes expirent un an apres l'achat. Le minimum de 5 dollars couvre
-largement plusieurs annees a ce rythme : n'achetez pas davantage.
-
-Verifiez la tarification en vigueur, elle evolue.
-
-### Verification
+## Vérifier que tout marche
 
 ```bash
-python test_ia.py
+python test_correction.py    # la règle du tout ou rien, l'équilibre des profils
+python test_analyse.py       # 60 passations simulées, dont 2 questions défectueuses
+python test_ia.py            # 7 formulations interdites, l'absence d'identité
+python test_sauvegarde.py    # la construction et la relecture d'une archive
+python test_pige.py          # dédoublonnage, tri, périmètre
 ```
 
-Le script controle que sept formulations inacceptables sont bien rejetees, que la
-charge utile ne contient aucune identite, et que l'absence de cle degrade
-proprement sans faire tomber l'application.
+Aucun ne demande de réseau ni de base de données. `test_analyse.py` fabrique
+soixante passations dont deux questions volontairement mauvaises, et vérifie
+que l'analyse les repère sans accuser les questions saines.
+
+---
+
+## Ce qui reste à faire
+
+Rien de bloquant, mais autant l'écrire.
+
+La pige vient d'être mise en service : le compteur de réapparitions est
+encore à zéro, il lui faut quelques semaines d'historique pour devenir utile.
+
+Le code ROME du gestionnaire de paie n'est pas tranché — selon les annonces il
+relève de la comptabilité ou de l'assistanat RH. Les deux sont interrogés,
+avec un filtre sur l'intitulé.
+
+Et surtout : à partir d'une cinquantaine de recrutements suivis dans le temps,
+les données collectées permettraient de croiser le score obtenu avec la
+réussite en poste, et donc de savoir si le test prédit réellement quelque
+chose. Tant que ce recul n'existe pas, aucun modèle prédictif ne serait
+honnête. Le schéma de la base est fait pour l'accueillir, pas pour le simuler.
+
+---
+
+*Birane Wane — projet de stage, 2026.*
