@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block titre %}Entreprises qui recrutent{% endblock %}
+{% block contenu %}
+<h1>Entreprises qui recrutent</h1>
+<p class="chapeau">Classées par nombre de postes actuellement ouverts.
+<a class="lien" href="/admin/pige">Retour à la pige</a></p>
+
+<div class="encadre discret">
+  <p>Une entreprise qui publie plusieurs postes, ou qui republie régulièrement, est un
+     compte à travailler dans la durée. Les raisons sociales sont regroupées : « KPMG »,
+     « KPMG France » et « Cabinet KPMG » comptent pour une seule entreprise.</p>
+</div>
+
+{% if entreprises %}
+<table>
+  <thead>
+    <tr>
+      <th>Entreprise</th><th>Postes ouverts</th><th>Total vu</th>
+      <th>Plus ancienne</th><th>Réapparitions</th><th>Communes</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for e in entreprises %}
+    <tr>
+      <td><b>{{ e.entreprise }}</b></td>
+      <td>{{ e.postes_en_ligne }}</td>
+      <td>{{ e.postes }}</td>
+      <td>{% if e.plus_ancienne is not none %}{{ e.plus_ancienne }} j{% else %}—{% endif %}</td>
+      <td>{{ e.reparutions or 0 }}</td>
+      <td class="petit">{{ e.communes or '' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="petit">Aucune entreprise repérée pour l'instant.</p>
+{% endif %}
+{% endblock %}

@@ -61,6 +61,7 @@ def main():
         executer_fichier(conn, "schema.sql")
         executer_fichier(conn, "schema_analyse.sql")
         executer_fichier(conn, "schema_sauvegarde.sql")
+        executer_fichier(conn, "schema_pige.sql")
 
         print("\nControle...")
         tables = conn.execute(

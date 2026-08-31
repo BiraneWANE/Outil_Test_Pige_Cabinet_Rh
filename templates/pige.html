@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block titre %}Pige des annonces{% endblock %}
+{% block contenu %}
+<h1>Pige des annonces</h1>
+<p class="chapeau">Les entreprises qui recrutent sur vos métiers, suivies jour après jour.
+<a class="lien" href="/admin">Retour aux invitations</a></p>
+
+{% if not etat.configuree %}
+<div class="encadre alerte">
+  <p><b>Aucune source n'est configurée.</b> Renseignez <code>FT_CLIENT_ID</code> et
+  <code>FT_CLIENT_SECRET</code> pour France Travail, <code>ADZUNA_APP_ID</code> et
+  <code>ADZUNA_APP_KEY</code> pour Adzuna, dans les variables d'environnement de
+  l'hébergeur. La collecte démarrera au redéploiement suivant.</p>
+</div>
+{% endif %}
+
+{% if collecte %}
+<div class="encadre">
+  <p>Collecte lancée : {{ collecte.recues }} annonce(s) reçue(s),
+     {{ collecte.nouvelles }} nouvelle(s), {{ collecte.reparues }} réapparue(s),
+     {{ collecte.retirees }} retirée(s).</p>
+</div>
+{% endif %}
+
+<div class="cartes">
+  <div class="carte"><span class="gros">{{ etat.en_ligne }}</span>annonces en ligne</div>
+  <div class="carte"><span class="gros">{{ etat.entreprises }}</span>entreprises repérées</div>
+  <div class="carte"><span class="gros {{ 'alerte-texte' if etat.anciennes }}">{{ etat.anciennes }}</span>en ligne depuis 30 jours ou plus</div>
+  <div class="carte"><span class="gros">{{ etat.reparues }}</span>annonces réapparues</div>
+  <div class="carte"><span class="gros">{{ etat.jours_historises }}</span>jours d'historique</div>
+</div>
+
+<div class="encadre discret">
+  <h2>Lire cette page</h2>
+  <p><b>L'ancienneté</b> est le nombre de jours depuis la publication. Une annonce qui
+     dure signale un recrutement qui peine : c'est le meilleur moment pour appeler.</p>
+  <p><b>Une réapparition</b> est une annonce disparue puis republiée. Signal plus fort
+     encore : le poste a été pourvu et ne l'est plus, ou le recrutement a échoué.</p>
+  <p><b>Le nombre de postes</b> ouverts chez une même entreprise désigne un compte à
+     travailler dans la durée, pas un coup isolé.</p>
+</div>
+
+<div class="encadre">
+  <h2>Filtrer</h2>
+  <form method="get" action="/admin/pige" class="grille">
+    <label>Périmètre
+      <select name="partie">
+        <option value="">les deux parties</option>
+        <option value="1" {{ 'selected' if partie == 1 }}>partie 1 — contrôle de gestion, Île-de-France</option>
+        <option value="2" {{ 'selected' if partie == 2 }}>partie 2 — comptabilité et paie, Malakoff 10 km</option>
+      </select>
+    </label>
+    <label>Métier
+      <select name="metier">
+        <option value="">tous</option>
+        <option value="controle_gestion" {{ 'selected' if metier == 'controle_gestion' }}>contrôle de gestion</option>
+        <option value="comptabilite" {{ 'selected' if metier == 'comptabilite' }}>comptabilité</option>
+        <option value="paie" {{ 'selected' if metier == 'paie' }}>paie</option>
+      </select>
+    </label>
+    <label>Ancienneté minimale
+      <select name="anciennete">
+        <option value="0">aucune</option>
+        <option value="14" {{ 'selected' if anciennete == 14 }}>14 jours et plus</option>
+        <option value="30" {{ 'selected' if anciennete == 30 }}>30 jours et plus</option>
+        <option value="60" {{ 'selected' if anciennete == 60 }}>60 jours et plus</option>
+      </select>
+    </label>
+    <label>Classer par
+      <select name="tri">
+        <option value="anciennete" {{ 'selected' if tri == 'anciennete' }}>ancienneté</option>
+        <option value="reparutions" {{ 'selected' if tri == 'reparutions' }}>réapparitions</option>
+        <option value="entreprise" {{ 'selected' if tri == 'entreprise' }}>entreprises les plus actives</option>
+        <option value="recentes" {{ 'selected' if tri == 'recentes' }}>arrivées récentes</option>
+      </select>
+    </label>
+    <button type="submit">Appliquer</button>
+  </form>
+</div>
+
+<p>
+  <a class="lien" href="/admin/pige/prospects.csv">Télécharger la liste (CSV)</a> —
+  <a class="lien" href="/admin/pige/entreprises">voir le classement des entreprises</a>
+</p>
+
+<h2>{{ prospects|length }} prospect(s)</h2>
+{% if prospects %}
+<table>
+  <thead>
+    <tr>
+      <th>Entreprise</th><th>Poste</th><th>Lieu</th>
+      <th>Ancienneté</th><th>Signaux</th><th>Source</th><th></th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in prospects %}
+    <tr>
+      <td>
+        <b>{{ p.entreprise or 'non précisée' }}</b>
+        {% if p.postes_ouverts_entreprise > 1 %}
+          <br><span class="petit">{{ p.postes_ouverts_entreprise }} postes ouverts</span>
+        {% endif %}
+      </td>
+      <td>{{ p.intitule }}<br><span class="petit">{{ p.type_contrat or '' }}</span></td>
+      <td>{{ p.commune or '—' }}<br><span class="petit">{{ p.code_postal or '' }}</span></td>
+      <td>
+        {% if p.anciennete_jours is not none %}
+          <b class="{{ 'alerte-texte' if p.anciennete_jours >= 30 }}">{{ p.anciennete_jours }} j</b>
+        {% else %}—{% endif %}
+      </td>
+      <td>
+        {% if p.nb_reparutions %}<span class="etat expiree">{{ p.nb_reparutions }} réapparition(s)</span>{% endif %}
+        {% if not p.en_ligne %}<span class="petit">retirée</span>{% endif %}
+      </td>
+      <td><span class="petit">{{ p.sources }}</span></td>
+      <td>{% if p.url %}<a class="lien" href="{{ p.url }}" target="_blank" rel="noopener">voir</a>{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="petit">Aucune annonce pour ces critères. Si la collecte n'a jamais tourné,
+   lancez-la depuis le bas de cette page.</p>
+{% endif %}
+
+<h2>Collectes</h2>
+{% if journal %}
+<table>
+  <thead><tr><th>Date</th><th>Statut</th><th>Reçues</th><th>Nouvelles</th><th>Réapparues</th><th>Retirées</th><th>Détail</th></tr></thead>
+  <tbody>
+  {% for c in journal %}
+    <tr>
+      <td>{{ c.lancee_le|heure }}</td>
+      <td><span class="etat {{ 'terminee' if c.statut == 'terminee' else 'expiree' }}">{{ c.statut }}</span></td>
+      <td>{{ c.nb_recues }}</td>
+      <td>{{ c.nb_nouvelles }}</td>
+      <td>{{ c.nb_reparues }}</td>
+      <td>{{ c.nb_retirees }}</td>
+      <td class="petit">{{ c.detail or '' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="petit">Aucune collecte enregistrée.</p>
+{% endif %}
+
+<div class="encadre">
+  <h2>Déclenchement</h2>
+  <p>La collecte se lance toute seule une fois par jour, au démarrage du serveur puis
+     à l'ouverture de cette page. Vous pouvez aussi la déclencher maintenant : le
+     traitement est le même, il prend une à deux minutes.</p>
+  <form method="post" action="/admin/pige/collecter">
+    <button type="submit">Lancer la collecte maintenant</button>
+  </form>
+</div>
+{% endblock %}

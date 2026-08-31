@@ -34,6 +34,7 @@ import ia
 import affichage
 import rgpd
 import sauvegarde
+import pige
 
 
 @asynccontextmanager
@@ -68,6 +69,15 @@ async def cycle_de_vie(app):
                       f"{resume['total_lignes']} lignes")
         except Exception as e:
             print(f"[sauvegarde] copie impossible au demarrage : {e}")
+        # La collecte d'annonces vient en dernier : c'est la plus longue,
+        # une a deux minutes, et la moins critique des trois.
+        try:
+            resume = pige.collecter_si_besoin()
+            if resume:
+                print(f"[pige] collecte du jour : {resume['recues']} annonce(s), "
+                      f"{resume['nouvelles']} nouvelle(s)")
+        except Exception as e:
+            print(f"[pige] collecte impossible au demarrage : {e}")
 
     threading.Thread(target=tache, name="entretien", daemon=True).start()
     yield
@@ -624,6 +634,82 @@ def telecharger_copie(sauvegarde_id: int, utilisateur: str = Depends(recruteur))
         media_type="application/zip",
         headers={"Content-Disposition":
                  f'attachment; filename="{sauvegarde.nom_fichier(ligne["cree_le"])}"'},
+    )
+
+
+# ==================================================================
+# Pige des annonces
+# ==================================================================
+
+@app.get("/admin/pige", response_class=HTMLResponse)
+def page_pige(request: Request, partie: int = None, metier: str = None,
+              anciennete: int = 0, tri: str = "anciennete",
+              collectees: int = None, utilisateur: str = Depends(recruteur)):
+    # Second declencheur de la collecte quotidienne, pour les journees
+    # ou le serveur ne redemarre pas. Une erreur ici ne doit pas
+    # empecher la consultation de ce qui a deja ete collecte.
+    try:
+        pige.collecter_si_besoin()
+    except Exception as e:
+        print(f"[pige] collecte impossible : {e}")
+
+    return templates.TemplateResponse(request, "pige.html", {
+        "request": request,
+        "etat": pige.etat(),
+        "prospects": pige.prospects(partie=partie, metier=metier,
+                                    anciennete_min=anciennete, tri=tri),
+        "journal": pige.journal_collectes(),
+        "partie": partie,
+        "metier": metier,
+        "anciennete": anciennete,
+        "tri": tri,
+        "collecte": None,
+    })
+
+
+@app.get("/admin/pige/entreprises", response_class=HTMLResponse)
+def page_pige_entreprises(request: Request, utilisateur: str = Depends(recruteur)):
+    return templates.TemplateResponse(request, "pige_entreprises.html", {
+        "request": request,
+        "entreprises": pige.entreprises_actives(50),
+    })
+
+
+@app.post("/admin/pige/collecter")
+def lancer_collecte(utilisateur: str = Depends(recruteur)):
+    """Meme traitement que la collecte automatique, declenche a la main."""
+    resume = pige.collecter()
+    return RedirectResponse(
+        f"/admin/pige?collectees={resume['recues']}", status_code=303
+    )
+
+
+@app.get("/admin/pige/prospects.csv")
+def prospects_csv(partie: int = None, metier: str = None, anciennete: int = 0,
+                  tri: str = "anciennete", utilisateur: str = Depends(recruteur)):
+    """La liste de prospects, pour la travailler hors de l'outil."""
+    import csv
+    import io
+    lignes = pige.prospects(partie=partie, metier=metier,
+                            anciennete_min=anciennete, tri=tri, limite=5000)
+    tampon = io.StringIO()
+    graveur = csv.writer(tampon, delimiter=";")
+    graveur.writerow(["Entreprise", "Poste", "Commune", "Code postal", "Contrat",
+                      "Anciennete (jours)", "Postes ouverts", "Reapparitions",
+                      "En ligne", "Partie", "Metier", "Sources", "Lien"])
+    for p in lignes:
+        graveur.writerow([
+            p["entreprise"] or "", p["intitule"], p["commune"] or "",
+            p["code_postal"] or "", p["type_contrat"] or "",
+            p["anciennete_jours"] if p["anciennete_jours"] is not None else "",
+            p["postes_ouverts_entreprise"], p["nb_reparutions"],
+            "oui" if p["en_ligne"] else "non", p["partie"], p["metier"],
+            p["sources"], p["url"] or "",
+        ])
+    return Response(
+        content=tampon.getvalue().encode("utf-8-sig"),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="prospects.csv"'},
     )
 
 
