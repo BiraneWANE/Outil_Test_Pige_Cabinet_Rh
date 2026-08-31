@@ -248,9 +248,79 @@ for dedans in ("Malakoff", "MALAKOFF", "Vanves", "Issy-les-Moulineaux",
 for dehors in ("Lyon", "Nantes", "Bordeaux", "Marseille", "Lille", "Rennes"):
     assert pige.hors_perimetre_2({"partie": 2, "commune": dehors}), dehors
 
-# Le code postal fait foi quand il est là.
-assert not pige.hors_perimetre_2({"partie": 2, "commune": "SAINT-MAUR",
-                                  "code_postal": "94100"})
+# Le département ne fait plus foi : le 92 s'étend de Malakoff à
+# Colombes, bien au-delà du rayon. Seule la liste de communes compte.
+assert pige.hors_perimetre_2({"partie": 2, "commune": "SAINT-MAUR",
+                              "code_postal": "94100"})
+assert pige.hors_perimetre_2({"partie": 2, "commune": "Nanterre",
+                              "code_postal": "92000"})
+assert pige.hors_perimetre_2({"partie": 2, "commune": "Colombes",
+                              "code_postal": "92700"})
+
+# Paris est traité par arrondissement : le 18e et le 20e sont hors des
+# 10 km, le 14e et le 16e non.
+for dedans in ("75005", "75014", "75015", "75016"):
+    assert not pige.hors_perimetre_2({"partie": 2, "commune": "PARIS",
+                                      "code_postal": dedans}), dedans
+for dehors in ("75017", "75018", "75019", "75020"):
+    assert pige.hors_perimetre_2({"partie": 2, "commune": "PARIS",
+                                  "code_postal": dehors}), dehors
+
+# France Travail écrit « 75 - PARIS 14 » : le 75 ne doit pas être pris
+# pour un numéro d'arrondissement.
+assert pige._arrondissement("75 - PARIS 14", "75014") == 14
+assert pige._arrondissement("PARIS 14") == 14
+# Sans arrondissement identifiable, on garde plutôt que d'écarter à tort.
+assert not pige.hors_perimetre_2({"partie": 2, "commune": "PARIS",
+                                  "code_postal": "75000"})
+
+
+# --- 11 bis. Alternance, stage et organismes de formation --------------
+# Le cabinet place des missions de cadres, pas des alternants.
+for hors in (("Alternance - Assistant contrôle de gestion", "Arkema"),
+             ("Comptable en apprentissage", "Société X"),
+             ("Stagiaire paie", "Société Y"),
+             ("Contrôleur de gestion", "Walter Learning"),
+             ("Assistant comptable", "Les Sherpas")):
+    assert pige.est_alternance({"intitule": hors[0], "entreprise": hors[1]}), hors
+
+for garde in (("Contrôleur de gestion", "LECLERC"),
+              ("Comptable général", "In Extenso"),
+              ("Gestionnaire de paie", "KPMG France")):
+    assert not pige.est_alternance({"intitule": garde[0], "entreprise": garde[1]}), garde
+
+
+# --- 11 ter. Le secteur public, y compris les armées -------------------
+# La première collecte a fait remonter « Armée de l'Air et de l'Espace »
+# en tête du classement, avec 46 postes. L'apostrophe empêchait la
+# reconnaissance.
+for public in ("Armée de l'Air et de l'Espace", "Marine Nationale",
+               "Gendarmerie Nationale", "SSA", "Anah", "Dgafp"):
+    assert pige.est_secteur_public({"entreprise": public}), public
+
+for prive in ("L'Oréal", "Pennylane SAS", "In Extenso", "SELECT T.I.",
+              "Fayat Energie Services", "Groupe IGF", "Arkema"):
+    assert not pige.est_secteur_public({"entreprise": prive}), prive
+
+# « France Travail » échappait au filtre : cle_entreprise() retire
+# « france », vu comme un suffixe géographique, et « france travail »
+# devenait « travail ». La comparaison se fait donc aussi sur le nom
+# aplati, avant tout retrait.
+assert pige.est_secteur_public({"entreprise": "France Travail"})
+assert pige.est_secteur_public({"entreprise": "Pole Emploi"})
+
+
+# --- 11 quater. Candidatures spontanées et viviers ---------------------
+# Une boîte aux lettres laissée en ligne toute l'année n'est pas un
+# recrutement : elle explique une partie des anciennetés aberrantes.
+for faux in ("Profil Comptable - Candidature Spontanée",
+             "Vivier comptables et gestionnaires de paie",
+             "CVthèque — déposez votre CV"):
+    assert pige.sans_poste_reel({"intitule": faux}), faux
+
+for vrai in ("Comptable général H/F", "Gestionnaire de paie",
+             "Contrôleur de gestion - mission 6 mois"):
+    assert not pige.sans_poste_reel({"intitule": vrai}), vrai
 # La partie 1 couvre toute la France : ce contrôle ne la concerne pas.
 assert not pige.hors_perimetre_2({"partie": 1, "commune": "Lyon"})
 

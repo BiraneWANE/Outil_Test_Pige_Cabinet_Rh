@@ -120,7 +120,7 @@ ENSEIGNES_INTERMEDIAIRE = (
     "lynx rh", "aquila rh", "nextep", "tertialis", "sirh", "silkhom",
     "fab group", "vitalis", "kolibri", "opensourcing", "talentskill",
     "sbc interim", "up skills", "harry hope", "aec partners", "spring",
-    "cerba", "groupement demploi", "gerpa",
+    "cerba", "groupement demploi", "gerpa", "cabrh", "cab rh",
 )
 
 # ------------------------------------------------------------------
@@ -141,13 +141,53 @@ SECTEUR_PUBLIC_RACINES = (
     "etablissement public", "syndicat mixte", "office public",
     "centre communal", "service departemental d incendie",
     "collectivite", "agence regionale de sante",
+    # Armees et securite : la premiere collecte a fait remonter
+    # « Armee de l'Air et de l'Espace » en tete du classement des
+    # entreprises, avec 46 postes. Ce n'est pas un prospect.
+    "armee de l air", "armee de terre", "marine nationale",
+    "gendarmerie", "police nationale", "sapeurs pompiers",
+    "service de sante des armees", "direction generale",
+    "agence nationale", "office national", "institut national",
+    "centre national", "caisse nationale", "caisse primaire",
 )
 
 SECTEUR_PUBLIC_EXACTES = (
     "cnfpt", "cea", "aphp", "assistance hopitaux de paris", "cnrs",
     "inserm", "inrae", "inria", "onf", "ademe", "ars", "cpam", "caf",
     "urssaf", "msa", "ccas", "sdis", "france travail", "pole emploi",
-    "education nationale", "armee de terre", "gendarmerie nationale",
+    "education nationale", "gendarmerie nationale",
+    "ssa", "anah", "dgafp", "ofpra", "ansm", "anses", "insee",
+    "dgfip", "douane", "onac", "ena", "inp",
+)
+
+# ------------------------------------------------------------------
+# Alternance, stage et organismes de formation
+# ------------------------------------------------------------------
+# Le cabinet place des missions courtes de cadres, pas des alternants.
+# Les ecoles qui publient des offres d'alternance ne sont pas non plus
+# des prospects : elles recrutent pour leurs entreprises partenaires.
+MOTS_ALTERNANCE = (
+    "alternance", "alternant", "apprenti", "apprentissage",
+    "contrat pro", "professionnalisation", "stagiaire",
+)
+
+# Une candidature spontanee n'est pas un poste ouvert : c'est une boite
+# aux lettres laissee en ligne toute l'annee. Elle explique une partie
+# des anciennetes aberrantes, et il n'y a aucun besoin a appeler.
+MOTS_SANS_POSTE = (
+    "candidature spontanee", "candidatures spontanees", "vivier",
+    "cvtheque", "cv theque", "profil comptable candidature",
+    "deposez votre cv", "offre generique",
+)
+
+ENSEIGNES_FORMATION = (
+    "walter learning", "les sherpas", "iscod", "capijobnew",
+    "openclassrooms", "studi", "digital campus", "campus academy",
+    "ecole superieure", "cfa", "centre de formation",
+    # « formation » suffit : une societe qui porte ce mot dans sa
+    # raison sociale forme, elle ne recrute pas de comptables pour
+    # elle-meme. « EFC Formation » figurait dans les prospects.
+    "formation",
 )
 
 # ------------------------------------------------------------------
@@ -539,13 +579,24 @@ def est_mission_courte(annonce):
     return True
 
 
+def _nom_aplati(nom):
+    """Le nom sans accent, sans ponctuation, en minuscules.
+
+    « Armee de l'Air » et « armee de l air » doivent se comparer : sans
+    cela, une apostrophe suffit a faire passer une administration pour
+    une entreprise privee.
+    """
+    return " ".join(re.sub(r"[^a-z0-9]+", " ",
+                           _sans_accent(nom or "").lower()).split())
+
+
 def est_intermediaire(annonce):
     """
     Cabinet de recrutement ou agence d'interim : un confrere, pas un
     prospect. L'annonce est conservee mais mise de cote, pour que le
     cabinet puisse verifier et rattraper une erreur de tri.
     """
-    nom = _sans_accent(annonce.get("entreprise") or "").lower()
+    nom = _nom_aplati(annonce.get("entreprise"))
     if not nom:
         return False
 
@@ -569,12 +620,16 @@ def est_intermediaire(annonce):
 def est_secteur_public(annonce):
     """Administration, collectivite, hopital public : passe par marche
     public, donc hors demarchage."""
-    nom = _sans_accent(annonce.get("entreprise") or "").lower()
+    nom = _nom_aplati(annonce.get("entreprise"))
     if not nom:
         return False
     if any(r in nom for r in SECTEUR_PUBLIC_RACINES):
         return True
-    return cle_entreprise(nom) in SECTEUR_PUBLIC_EXACTES
+    # Deux comparaisons : le nom aplati tel quel, et le nom debarrasse
+    # de ses suffixes juridiques. « France Travail » ne passe que par
+    # la premiere, car cle_entreprise() retire « france ».
+    return nom in SECTEUR_PUBLIC_EXACTES or \
+        cle_entreprise(nom) in SECTEUR_PUBLIC_EXACTES
 
 
 def trop_ancienne(annonce, aujourdhui=None):
@@ -588,17 +643,55 @@ def trop_ancienne(annonce, aujourdhui=None):
     return (jour - publiee).days > ANCIENNETE_MAX
 
 
+# Paris fait plus de dix kilometres de diametre : accepter « Paris »
+# en bloc revient a sortir du rayon. Les arrondissements du nord et de
+# l'est sont au-dela, ceux du sud et du centre non.
+ARRONDISSEMENTS_PROCHES = set(range(1, 17))       # 1er a 16e
+
+
+def _arrondissement(nom, code_postal=None):
+    """
+    Rend le numero d'arrondissement parisien, ou None.
+
+    Le code postal est prefere au libelle : France Travail ecrit
+    « 75 - PARIS 14 », et chercher le premier nombre du texte y
+    trouverait 75, le departement, au lieu de 14.
+    """
+    code = (code_postal or "").strip()
+    if code.startswith("750") and code[3:].isdigit():
+        return int(code[3:]) or None
+    t = _sans_accent(nom or "").lower()
+    if "paris" not in t:
+        return None
+    t = re.sub(r"^\s*\d{2,3}\s*-\s*", "", t)      # prefixe departemental
+    trouve = re.search(r"paris\D*(\d{1,2})", t)
+    return int(trouve.group(1)) if trouve else None
+
+
 def hors_perimetre_2(annonce):
-    """Vrai si une annonce de la partie 2 n'est pas dans les 10 km."""
+    """
+    Vrai si une annonce de la partie 2 n'est pas dans les 10 km.
+
+    Le code postal ne suffit pas : le departement 92 s'etend de
+    Malakoff a Colombes, soit bien au-dela du rayon. Seule la liste de
+    communes fait foi, et Paris est traite par arrondissement.
+    """
     if annonce.get("partie") != 2:
         return False
-    code = (annonce.get("code_postal") or "").strip()
-    if code[:2] in ("92", "94", "75"):
-        return False
     commune = _commune_normalisee(annonce.get("commune"))
+    code = (annonce.get("code_postal") or "").strip()
+
+    if "paris" in commune or code.startswith("75"):
+        numero = _arrondissement(annonce.get("commune"), code)
+        # Un « Paris » sans arrondissement reste accepte : on ne peut
+        # pas trancher, et le centre est majoritairement dans le rayon.
+        # Un numero absent ou nul (75000, code generique) ne permet pas
+        # de trancher : on garde plutot que d'ecarter a tort.
+        return bool(numero) and numero not in ARRONDISSEMENTS_PROCHES
+
     if not commune:
         return True          # sans lieu, on ne peut pas garantir le rayon
-    return not any(commune == c or commune.startswith(c + " ") or c in commune
+    return not any(commune == c or commune.startswith(c + " ")
                    for c in COMMUNES_PARTIE_2)
 
 
@@ -643,12 +736,31 @@ def courriel_generique(adresse):
     return False
 
 
+def est_alternance(annonce):
+    """Alternance, apprentissage ou stage : hors du marche du cabinet."""
+    texte = _nom_aplati(annonce.get("intitule"))
+    if any(m in texte for m in MOTS_ALTERNANCE):
+        return True
+    nom = _nom_aplati(annonce.get("entreprise"))
+    return any(e.strip() in nom for e in ENSEIGNES_FORMATION)
+
+
+def sans_poste_reel(annonce):
+    """Candidature spontanee ou vivier : pas de recrutement en cours."""
+    texte = _nom_aplati(annonce.get("intitule"))
+    return any(m in texte for m in MOTS_SANS_POSTE)
+
+
 def motif_ecart(annonce, aujourdhui=None):
     """Rend la raison de mettre une annonce de cote, ou None."""
+    if sans_poste_reel(annonce):
+        return "candidature spontanee ou vivier, pas un poste ouvert"
     if hors_perimetre_2(annonce):
         return "hors des 10 km autour de Malakoff"
     if est_intermediaire(annonce):
         return "cabinet de recrutement ou agence d'interim"
+    if est_alternance(annonce):
+        return "alternance, stage ou organisme de formation"
     if est_secteur_public(annonce):
         return "secteur public, passe par marche public"
     if trop_ancienne(annonce, aujourdhui):
