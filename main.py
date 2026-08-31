@@ -168,6 +168,22 @@ def finaliser(inv):
 
 
 # ==================================================================
+# Racine
+#
+# Personne n'a de raison d'arriver sur « / » : les candidats recoivent
+# un lien /t/<jeton>, le cabinet va sur /admin. Mais l'adresse existe,
+# elle est tapee par curiosite et surtout appelee par la surveillance
+# de l'hebergeur, qui journalisait jusqu'ici une erreur 404 a chaque
+# passage. On renvoie donc vers le back-office, qui demandera le mot
+# de passe : rien n'est expose au passage.
+# ==================================================================
+
+@app.get("/")
+def racine():
+    return RedirectResponse("/admin", status_code=307)
+
+
+# ==================================================================
 # Parcours candidat
 # ==================================================================
 
