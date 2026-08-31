@@ -641,10 +641,25 @@ def telecharger_copie(sauvegarde_id: int, utilisateur: str = Depends(recruteur))
 # Pige des annonces
 # ==================================================================
 
+def _entier(valeur, defaut=None):
+    """Un menu deroulant laisse a « tous » envoie une valeur vide.
+    FastAPI refuse de la convertir en entier et rend une erreur 422 :
+    on convertit donc nous-memes, en tolerant le vide."""
+    try:
+        return int(valeur)
+    except (TypeError, ValueError):
+        return defaut
+
+
 @app.get("/admin/pige", response_class=HTMLResponse)
-def page_pige(request: Request, partie: int = None, metier: str = None,
-              anciennete: int = 0, tri: str = "anciennete", ecartees: int = 0,
+def page_pige(request: Request, partie: str = None, metier: str = None,
+              anciennete: str = None, tri: str = "anciennete",
+              ecartees: str = None,
               collectees: int = None, utilisateur: str = Depends(recruteur)):
+    partie = _entier(partie)
+    anciennete = _entier(anciennete, 0)
+    ecartees = _entier(ecartees, 0)
+    metier = metier or None
     # Second declencheur de la collecte quotidienne, pour les journees
     # ou le serveur ne redemarre pas. Une erreur ici ne doit pas
     # empecher la consultation de ce qui a deja ete collecte.
@@ -687,9 +702,13 @@ def lancer_collecte(utilisateur: str = Depends(recruteur)):
 
 
 @app.get("/admin/pige/prospects.csv")
-def prospects_csv(partie: int = None, metier: str = None, anciennete: int = 0,
-                  tri: str = "anciennete", ecartees: int = 0,
+def prospects_csv(partie: str = None, metier: str = None, anciennete: str = None,
+                  tri: str = "anciennete", ecartees: str = None,
                   utilisateur: str = Depends(recruteur)):
+    partie = _entier(partie)
+    anciennete = _entier(anciennete, 0)
+    ecartees = _entier(ecartees, 0)
+    metier = metier or None
     """La liste de prospects, pour la travailler hors de l'outil."""
     import csv
     import io
@@ -718,8 +737,10 @@ def prospects_csv(partie: int = None, metier: str = None, anciennete: int = 0,
 
 
 @app.get("/admin/pige/contacts", response_class=HTMLResponse)
-def page_contacts(request: Request, nominatives: int = 0, desinscrits: int = 0,
+def page_contacts(request: Request, nominatives: str = None, desinscrits: str = None,
                   desinscrit: str = None, utilisateur: str = Depends(recruteur)):
+    nominatives = _entier(nominatives, 0)
+    desinscrits = _entier(desinscrits, 0)
     return templates.TemplateResponse(request, "pige_contacts.html", {
         "request": request,
         "etat": pige.etat_contacts(),
@@ -745,7 +766,8 @@ def desinscrire_contact(courriel: str = Form(...),
 
 
 @app.get("/admin/pige/contacts.csv")
-def contacts_csv(nominatives: int = 0, utilisateur: str = Depends(recruteur)):
+def contacts_csv(nominatives: str = None, utilisateur: str = Depends(recruteur)):
+    nominatives = _entier(nominatives, 0)
     """Le fichier d'envoi. Les desinscrits n'y figurent jamais."""
     import csv
     import io

@@ -147,6 +147,32 @@ compta = [p for _, m, p in pige._recherches_france_travail() if m == "comptabili
 assert compta["commune"] == "92046" and compta["distance"] == 10
 assert "typeContrat" not in compta
 
+# La paie se cherche par mots-clés : la première collecte a montré que
+# les codes ROME M1203 et M1501 ne rendaient que 9 annonces, alors que
+# les gestionnaires de paie sont noyés dans les 511 offres de compta.
+paie = [p for _, m, p in pige._recherches_france_travail() if m == "paie"][0]
+assert "motsCles" in paie and "paie" in paie["motsCles"]
+assert "codeROME" not in paie
+assert paie["commune"] == "92046" and paie["distance"] == 10
+
+# Une seule recherche paie désormais, au lieu de deux codes ROME.
+assert len([r for r in pige.RECHERCHES if r["metier"] == "paie"]) == 1
+
+
+# --- 7 bis. Le métier se lit dans l'intitulé -----------------------------
+# Sans cela, un gestionnaire de paie trouvé d'abord par la recherche
+# comptabilité garde l'étiquette « comptabilite » après dédoublonnage,
+# et le filtre par métier de la page devient faux.
+assert pige.metier_reel({"partie": 2, "intitule": "Gestionnaire de paie H/F"},
+                        "comptabilite") == "paie"
+assert pige.metier_reel({"partie": 2, "intitule": "Assistant paie et ADP"},
+                        "comptabilite") == "paie"
+assert pige.metier_reel({"partie": 2, "intitule": "Comptable général"},
+                        "paie") == "comptabilite"
+# La partie 1 ne contient qu'un métier, quel que soit l'intitulé.
+assert pige.metier_reel({"partie": 1, "intitule": "Contrôleur de gestion paie"},
+                        "controle_gestion") == "controle_gestion"
+
 
 # --- 8. Écarter les intermédiaires -------------------------------------
 # Ce sont des confrères : ils recrutent pour un client dont ils taisent

@@ -199,14 +199,18 @@ def _commune_normalisee(nom):
     t = re.sub(r"[^a-z ]+", " ", t)
     return " ".join(t.split())
 
+# La paie ne se cherche pas par code ROME : la premiere collecte l'a
+# montre. M1203 et M1501 reunis n'ont rendu que 9 annonces autour de
+# Malakoff, alors que les gestionnaires de paie y sont noyes parmi les
+# 511 offres de comptabilite. La nomenclature officielle ne reflete pas
+# le metier. On cherche donc par mots-cles, comme le ferait un humain.
 RECHERCHES = [
     {"partie": 1, "metier": "controle_gestion", "rome": "M1204",
-     "zone": "france",   "contrats": CONTRATS_COURTS},
+     "mots": None, "zone": "france",   "contrats": CONTRATS_COURTS},
     {"partie": 2, "metier": "comptabilite",     "rome": "M1203",
-     "zone": "malakoff", "contrats": None},
-    {"partie": 2, "metier": "paie",             "rome": "M1203",
-     "zone": "malakoff", "contrats": None},
-    {"partie": 2, "metier": "paie",             "rome": "M1501",
+     "mots": None, "zone": "malakoff", "contrats": None},
+    {"partie": 2, "metier": "paie",             "rome": None,
+     "mots": "paie,gestionnaire de paie,payroll",
      "zone": "malakoff", "contrats": None},
 ]
 
@@ -415,7 +419,7 @@ def _appeler_france_travail(parametres, debut, fin):
     return json.loads(texte).get("resultats", [])
 
 
-def _appeler_adzuna(mots, ou, distance, page, missions_seules=False):
+def _appeler_adzuna(mots, ou, distance, page):
     identifiant = os.environ.get("ADZUNA_APP_ID")
     cle = os.environ.get("ADZUNA_APP_KEY")
     if not identifiant or not cle:
@@ -432,10 +436,10 @@ def _appeler_adzuna(mots, ou, distance, page, missions_seules=False):
         parametres["where"] = ou
     if distance:
         parametres["distance"] = distance
-    if missions_seules:
-        # Adzuna ne distingue que « permanent » et « contract » :
-        # on demande le second, le tri fin se fait ensuite.
-        parametres["contract"] = 1
+    # Note : le parametre « contract » d'Adzuna a ete retire. Combine a
+    # une recherche nationale il ne rendait aucun resultat, alors que la
+    # meme recherche sans lui en rend des centaines. Le tri des missions
+    # courtes se fait donc entierement chez nous, par est_mission_courte().
     url = (f"https://api.adzuna.com/v1/api/jobs/fr/search/{page}?"
            + urllib.parse.urlencode(parametres))
     _, texte = _lire(url)
@@ -488,6 +492,21 @@ def convertir_adzuna(offre, partie, metier):
         "contact_courriel": None,     # Adzuna n'en publie pas
         "publiee_le": _date(offre.get("created")),
     }
+
+
+def metier_reel(annonce, metier_par_defaut):
+    """
+    Le metier se lit dans l'intitule, pas dans la recherche qui a
+    trouve l'annonce.
+
+    Sans cela, un gestionnaire de paie remonte par la recherche
+    comptabilite, puis par la recherche paie, et le dedoublonnage garde
+    la premiere etiquette arrivee. Le filtre par metier de la page
+    devient faux.
+    """
+    if annonce.get("partie") == 1:
+        return "controle_gestion"
+    return "paie" if concerne_la_paie(annonce) else "comptabilite"
 
 
 def concerne_la_paie(annonce):
@@ -641,7 +660,11 @@ def motif_ecart(annonce, aujourdhui=None):
 
 def _recherches_france_travail():
     for r in RECHERCHES:
-        parametres = {"codeROME": r["rome"], "sort": 1}
+        parametres = {"sort": 1}
+        if r["rome"]:
+            parametres["codeROME"] = r["rome"]
+        if r.get("mots"):
+            parametres["motsCles"] = r["mots"]
         if r["zone"] == "malakoff":
             parametres["commune"] = COMMUNE_PARTIE_2
             parametres["distance"] = DISTANCE_PARTIE_2
@@ -675,6 +698,7 @@ def collecter_france_travail(journal=None):
                 break
             for offre in offres:
                 a = convertir_france_travail(offre, partie, metier)
+                a["metier"] = metier_reel(a, metier)
                 if metier == "paie" and not concerne_la_paie(a):
                     continue
                 if partie == 1 and not est_mission_courte(a):
@@ -706,10 +730,10 @@ def collecter_adzuna(journal=None):
               f"{'toute la France' if national else 'Malakoff 10 km'} ...",
               flush=True)
         avant = len(annonces)
-        for page in range(1, 5):
+        for page in range(1, 9):
             try:
                 offres = _appeler_adzuna(MOTS_CLES_ADZUNA[metier], ou, distance,
-                                         page, missions_seules=national)
+                                         page)
             except urllib.error.HTTPError as e:
                 if journal is not None:
                     journal.append(f"adzuna {metier} : erreur {e.code}")
@@ -718,6 +742,7 @@ def collecter_adzuna(journal=None):
                 break
             for offre in offres:
                 a = convertir_adzuna(offre, partie, metier)
+                a["metier"] = metier_reel(a, metier)
                 if metier == "paie" and not concerne_la_paie(a):
                     continue
                 if partie == 1 and not est_mission_courte(a):
@@ -1125,19 +1150,24 @@ def retrier_tout():
     """
     _assurer_tables()
     with db.curseur() as cur:
-        cur.execute("SELECT id, partie, entreprise, commune, code_postal, "
-                    "       publiee_le, vue_le_premier "
+        cur.execute("SELECT id, partie, metier, intitule, entreprise, commune, "
+                    "       code_postal, publiee_le, vue_le_premier "
                     "  FROM annonce")
         lignes = cur.fetchall()
     ecartees = 0
+    remetiers = 0
     with db.curseur() as cur:
         for l in lignes:
             motif = motif_ecart(l)
             ecartees += 1 if motif else 0
-            cur.execute("UPDATE annonce SET ecartee = %s, motif_ecart = %s "
-                        " WHERE id = %s", (motif is not None, motif, l["id"]))
+            metier = metier_reel(l, l["metier"])
+            remetiers += 1 if metier != l["metier"] else 0
+            cur.execute("UPDATE annonce SET ecartee = %s, motif_ecart = %s, "
+                        "       metier = %s WHERE id = %s",
+                        (motif is not None, motif, metier, l["id"]))
     return {"examinees": len(lignes), "ecartees": ecartees,
-            "retenues": len(lignes) - ecartees}
+            "retenues": len(lignes) - ecartees,
+            "metier_corrige": remetiers}
 
 
 def oublier_contact(annonce_id):
