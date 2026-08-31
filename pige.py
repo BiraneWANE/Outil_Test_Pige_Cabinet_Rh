@@ -209,8 +209,12 @@ RECHERCHES = [
      "mots": None, "zone": "france",   "contrats": CONTRATS_COURTS},
     {"partie": 2, "metier": "comptabilite",     "rome": "M1203",
      "mots": None, "zone": "malakoff", "contrats": None},
+    # Un seul mot-cle : France Travail combine les mots separes par
+    # des virgules avec un ET logique, pas un OU. « paie,gestionnaire
+    # de paie,payroll » ne rendait qu'une annonce, celle qui contenait
+    # les trois. Un mot suffit, le filtre par intitule fait le reste.
     {"partie": 2, "metier": "paie",             "rome": None,
-     "mots": "paie,gestionnaire de paie,payroll",
+     "mots": "paie",
      "zone": "malakoff", "contrats": None},
 ]
 
