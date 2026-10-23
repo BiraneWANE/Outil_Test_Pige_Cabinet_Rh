@@ -6,7 +6,7 @@
       "domaine": "comptabilite",
       "niveau": "junior",
       "type_test": "technique",
-      "duree_minutes": 20,
+      "duree_minutes": 14,
       "consignes": "Chaque question précise son format. Une question n'est validée que si toutes les bonnes réponses sont cochées et qu'aucune réponse erronée ne l'est. Aucun point négatif.",
       "questions": [
         {
@@ -842,7 +842,7 @@
       "domaine": "comptabilite",
       "niveau": "confirme",
       "type_test": "technique",
-      "duree_minutes": 20,
+      "duree_minutes": 14,
       "consignes": "Chaque question précise son format. Une question n'est validée que si toutes les bonnes réponses sont cochées et qu'aucune réponse erronée ne l'est. Aucun point négatif.",
       "questions": [
         {
@@ -1513,7 +1513,7 @@
       "domaine": "paie",
       "niveau": "junior",
       "type_test": "technique",
-      "duree_minutes": 20,
+      "duree_minutes": 14,
       "consignes": "Chaque question précise son format. Une question n'est validée que si toutes les bonnes réponses sont cochées et qu'aucune réponse erronée ne l'est. Aucun point négatif.",
       "questions": [
         {
@@ -2349,7 +2349,7 @@
       "domaine": "paie",
       "niveau": "confirme",
       "type_test": "technique",
-      "duree_minutes": 20,
+      "duree_minutes": 14,
       "consignes": "Chaque question précise son format. Une question n'est validée que si toutes les bonnes réponses sont cochées et qu'aucune réponse erronée ne l'est. Aucun point négatif.",
       "questions": [
         {
@@ -3020,7 +3020,7 @@
       "domaine": "comptabilite",
       "niveau": "junior",
       "type_test": "positionnement",
-      "duree_minutes": 20,
+      "duree_minutes": 7,
       "consignes": "Il n'y a ni bonne ni mauvaise réponse. Les propositions sont toutes des qualités professionnelles : choisissez celle qui vous ressemble le plus. Vos réponses serviront de base à l'entretien.",
       "dimensions": {
         "R": "Rigueur et fiabilité",
@@ -3904,7 +3904,7 @@
       "domaine": "comptabilite",
       "niveau": "confirme",
       "type_test": "positionnement",
-      "duree_minutes": 20,
+      "duree_minutes": 7,
       "consignes": "Il n'y a ni bonne ni mauvaise réponse. Les propositions sont toutes des qualités professionnelles : choisissez celle qui vous ressemble le plus. Vos réponses serviront de base à l'entretien.",
       "dimensions": {
         "R": "Rigueur et fiabilité",
@@ -4788,7 +4788,7 @@
       "domaine": "paie",
       "niveau": "junior",
       "type_test": "positionnement",
-      "duree_minutes": 20,
+      "duree_minutes": 7,
       "consignes": "Il n'y a ni bonne ni mauvaise réponse. Les propositions sont toutes des qualités professionnelles : choisissez celle qui vous ressemble le plus. Vos réponses serviront de base à l'entretien.",
       "dimensions": {
         "R": "Rigueur et exactitude du chiffre",
@@ -5672,7 +5672,7 @@
       "domaine": "paie",
       "niveau": "confirme",
       "type_test": "positionnement",
-      "duree_minutes": 20,
+      "duree_minutes": 7,
       "consignes": "Il n'y a ni bonne ni mauvaise réponse. Les propositions sont toutes des qualités professionnelles : choisissez celle qui vous ressemble le plus. Vos réponses serviront de base à l'entretien.",
       "dimensions": {
         "R": "Rigueur et exactitude du chiffre",
